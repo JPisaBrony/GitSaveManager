@@ -254,6 +254,115 @@ void getStarredGist() {
     }
 }
 
+char* getUrlFromStarredGistByFilename(char *filename) {
+    CurlReturn curl_ret;
+    curl_ret.data = malloc(1);
+    curl_ret.size = 0;
+
+    CURL *curl = curl_easy_init();
+
+    if(curl) {
+        curl_easy_setopt(curl, CURLOPT_URL, "https://api.github.com/gists/starred");
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlReturnCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &curl_ret);
+        curl_easy_setopt(curl, CURLOPT_USERAGENT, USERAGENT);
+        curl_easy_setopt(curl, CURLOPT_USERNAME, username);
+        curl_easy_setopt(curl, CURLOPT_PASSWORD, password);
+
+        CURLcode res = curl_easy_perform(curl);
+
+        if(res != CURLE_OK)
+            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+
+        json_object *json_obj = json_tokener_parse(curl_ret.data);
+
+        int i;
+        json_object *json_iter;
+        size_t json_obj_len = json_object_array_length(json_obj);
+
+        for(i = 0; i < json_obj_len; i++) {
+            json_iter = json_object_array_get_idx(json_obj, i);
+            json_iter = json_object_object_get(json_iter, "files");
+            lh_table *files_table = json_object_get_object(json_iter);
+            const char *filename_json = files_table->head->k;
+            if(strcmp(filename, filename_json) == 0) {
+                json_iter = json_object_array_get_idx(json_obj, i);
+                json_iter = json_object_object_get(json_iter, "url");
+                return (char *) json_object_get_string(json_iter);
+            }
+        }
+
+        free(json_iter);
+        curl_easy_cleanup(curl);
+    }
+
+    return NULL;
+}
+
+void updateGist(char* filename) {
+    int i, c;
+
+    FILE *file = NULL;
+    file = fopen(filename, "rb");
+
+    if(file == NULL) {
+        printf("failed to open file %s\n", filename);
+        return;
+    }
+
+    fseek(file, 0, SEEK_END);
+    int binarySize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    char *buffer = malloc(binarySize << 2);
+
+    i = 0;
+    while((c = fgetc(file)) != EOF) {
+        buffer[i] = c;
+        i++;
+    }
+
+    fclose(file);
+
+    binaryToHex(buffer, binarySize);
+
+    char* url = getUrlFromStarredGistByFilename(filename);
+
+    // construct json object for PATCH request
+    json_object *json = json_object_new_object();
+    json_object *json_file = json_object_new_object();
+    json_object *json_filename = json_object_new_object();
+    json_object *content_val = json_object_new_string(buffer);
+    json_object_object_add(json_file, "content", content_val);
+    json_object_object_add(json_filename, filename, json_file);
+    json_object_object_add(json, "files", json_filename);
+
+    CURL *curl = curl_easy_init();
+
+    if(curl) {
+        curl_easy_setopt(curl, CURLOPT_URL, url);
+        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PATCH");
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_object_to_json_string(json));
+        curl_easy_setopt(curl, CURLOPT_USERAGENT, USERAGENT);
+        curl_easy_setopt(curl, CURLOPT_USERNAME, username);
+        curl_easy_setopt(curl, CURLOPT_PASSWORD, password);
+
+        CURLcode res = curl_easy_perform(curl);
+
+        if(res != CURLE_OK)
+            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+
+        curl_easy_cleanup(curl);
+    }
+
+    // cleanup
+    free(json_file);
+    free(json_filename);
+    free(content_val);
+    free(json);
+    free(buffer);
+}
+
 void exit_msg(char* msg) {
     printf("%s\n", msg);
     exit(-1);
@@ -272,8 +381,12 @@ int main(int argc, char *argv[]) {
 
         getLocalCreds();
 
-        getStarredGist();
+        //char* url = getUrlFromStarredGistByFilename("earthbound.src");
+        //if(url != NULL)
+        //    printf("%s\n", url);
+        updateGist("earthbound.src");
 
+        //getStarredGist();
         //createGistFromFile("somefile");
 
         curl_global_cleanup();

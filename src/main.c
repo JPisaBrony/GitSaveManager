@@ -18,6 +18,7 @@ typedef struct {
 
 typedef struct FileList {
     char *path;
+    char *name;
     struct FileList *next;
 } FileList;
 
@@ -154,8 +155,8 @@ char* openFileAndGetHexString(char* filename) {
     return buffer;
 }
 
-void createGist(char* filename) {
-    char* buffer = openFileAndGetHexString(filename);
+void createGist(char* path, char* filename) {
+    char* buffer = openFileAndGetHexString(path);
     if(buffer == NULL)
         return;
 
@@ -193,7 +194,7 @@ void createGist(char* filename) {
     free(buffer);
 }
 
-void getAndSaveGist(char* gistURL) {
+void getAndSaveGist(char* filename, char* url) {
     CurlReturn curl_ret;
     curl_ret.data = malloc(1);
     curl_ret.size = 0;
@@ -201,7 +202,7 @@ void getAndSaveGist(char* gistURL) {
     CURL *curl = curl_easy_init();
 
     if(curl) {
-        curl_easy_setopt(curl, CURLOPT_URL, gistURL);
+        curl_easy_setopt(curl, CURLOPT_URL, url);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlReturnCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &curl_ret);
         curl_easy_setopt(curl, CURLOPT_USERAGENT, USERAGENT);
@@ -227,7 +228,7 @@ void getAndSaveGist(char* gistURL) {
         hexToBinary(content, content_len);
 
         FILE *file = NULL;
-        file = fopen(file_name, "wb");
+        file = fopen(filename, "wb");
         fwrite(content, content_len / 2, 1, file);
         fclose(file);
 
@@ -392,9 +393,13 @@ FileList* getSavefileList() {
 
     while(getline(&line, &len, file) != -1) {
         FileList *new_node = malloc(sizeof(FileList));
-        new_node->path = malloc(len - 1);
+        char* split = strtok(line, " ");
+        new_node->path = malloc(strlen(split));
+        strcpy(new_node->path, split);
+        split = strtok(NULL, " ");
+        new_node->name = malloc(strlen(split) - 1);
+        strcpy(new_node->name, strtok(split, "\n"));
         new_node->next = NULL;
-        strcpy(new_node->path, strtok(line, "\n"));
         iter->next = new_node;
         iter = new_node;
     }
@@ -438,9 +443,9 @@ int main(int argc, char *argv[]) {
 
         FileList *cur = file_list;
         while(cur != NULL) {
-            char* url = getUrlFromGistByFilename(cur->path);
+            char* url = getUrlFromGistByFilename(cur->name);
             if(url == NULL)
-                createGist(cur->path);
+                createGist(cur->path, cur->name);
             else
                 updateGist(cur->path, url);
 
@@ -457,9 +462,9 @@ int main(int argc, char *argv[]) {
 
         FileList *cur = file_list;
         while(cur != NULL) {
-            char* url = getUrlFromGistByFilename(cur->path);
+            char* url = getUrlFromGistByFilename(cur->name);
             if(url != NULL)
-                getAndSaveGist(url);
+                getAndSaveGist(cur->path, url);
 
             cur = cur->next;
         }

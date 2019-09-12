@@ -6,6 +6,7 @@
 
 #define USERAGENT "curl"
 #define CREDENTIALS_FILE "credentials.txt"
+#define SAVEFILES "savefiles.txt"
 
 char* username = NULL;
 char* password = NULL;
@@ -14,6 +15,11 @@ typedef struct {
     char *data;
     size_t size;
 } CurlReturn;
+
+typedef struct FileList {
+    char *path;
+    struct FileList *next;
+} FileList;
 
 char* STR_concat(char* str0, char* str1) {
     int len0 = strlen(str0);
@@ -363,6 +369,47 @@ void exit_msg(char* msg) {
 void exit_msg_cmd() {
     printf("Add either g for get or p push to the command line\n");
     exit(-1);
+}
+
+FileList* getSavefileList() {
+    FILE *file = NULL;
+    char *line = NULL;
+    size_t len = 0;
+
+    file = fopen(SAVEFILES, "r");
+
+    if(file == NULL) {
+        printf("failed to open file %s\n", SAVEFILES);
+        return;
+    }
+
+    FileList *file_list = NULL;
+    FileList *iter = NULL;
+
+    while(getline(&line, &len, file) != -1) {
+        FileList *new_node = malloc(sizeof(FileList));
+        new_node->path = malloc(len - 1);
+        new_node->next = NULL;
+        strcpy(new_node->path, strtok(line, "\n"));
+        if(file_list == NULL) {
+            file_list = new_node;
+            iter = file_list;
+        } else {
+            iter->next = new_node;
+            iter = new_node;
+        }
+    }
+
+    FileList *cur = file_list;
+    while(cur != NULL) {
+        printf("%s\n", cur->path);
+        cur = cur->next;
+    }
+
+    fclose(file);
+    free(line);
+
+    return file_list;
 }
 
 int main(int argc, char *argv[]) {

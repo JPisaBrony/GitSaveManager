@@ -4,6 +4,49 @@
 #include <curl/curl.h>
 #include <json-c/json.h>
 
+#ifdef _3DS
+#include <3ds.h>
+
+#define SOC_ALIGN       0x1000
+#define SOC_BUFFERSIZE  0x100000
+
+#define SIZE 256
+int getline(char **lineptr, size_t *n, FILE *stream) {
+    static char line[SIZE];
+    char *ptr;
+    unsigned int len;
+
+    if (lineptr == NULL || n == NULL)
+        return -1;
+
+    if (ferror (stream))
+        return -1;
+
+    if (feof(stream))
+        return -1;
+
+    fgets(line, SIZE, stream);
+
+    ptr = strchr(line,'\n');
+    if (ptr)
+      *ptr = '\0';
+
+    len = strlen(line);
+
+    if ((len + 1) < SIZE) {
+      ptr = realloc(*lineptr, SIZE);
+      if (ptr == NULL)
+         return(-1);
+      *lineptr = ptr;
+      *n = SIZE;
+    }
+
+    strcpy(*lineptr,line);
+    return(len);
+}
+
+#endif
+
 #define USERAGENT "curl"
 #define CREDENTIALS_FILE "credentials.txt"
 #define SAVEFILES "savefiles.txt"
@@ -175,6 +218,7 @@ void createGist(char* path, char* filename) {
         curl_easy_setopt(curl, CURLOPT_URL, "https://api.github.com/gists");
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_object_to_json_string(json));
         curl_easy_setopt(curl, CURLOPT_USERAGENT, USERAGENT);
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
         curl_easy_setopt(curl, CURLOPT_USERNAME, username);
         curl_easy_setopt(curl, CURLOPT_PASSWORD, password);
 
@@ -206,6 +250,7 @@ void getAndSaveGist(char* filename, char* url) {
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlReturnCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &curl_ret);
         curl_easy_setopt(curl, CURLOPT_USERAGENT, USERAGENT);
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
 
         CURLcode res = curl_easy_perform(curl);
 
@@ -293,6 +338,7 @@ char* getUrlFromGistByFilename(char *filename) {
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, CurlReturnCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &curl_ret);
         curl_easy_setopt(curl, CURLOPT_USERAGENT, USERAGENT);
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
         curl_easy_setopt(curl, CURLOPT_USERNAME, username);
         curl_easy_setopt(curl, CURLOPT_PASSWORD, password);
 
@@ -347,6 +393,7 @@ void updateGist(char* filename, char* url) {
         curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PATCH");
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_object_to_json_string(json));
         curl_easy_setopt(curl, CURLOPT_USERAGENT, USERAGENT);
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
         curl_easy_setopt(curl, CURLOPT_USERNAME, username);
         curl_easy_setopt(curl, CURLOPT_PASSWORD, password);
 
@@ -411,11 +458,13 @@ FileList* getSavefileList() {
     // free unlinked node
     free(iter);
 
+    printf("currently tracked files\n");
     FileList *cur = file_list;
     while(cur != NULL) {
         printf("%s\n", cur->path);
         cur = cur->next;
     }
+    printf("\n");
 
     fclose(file);
     free(line);
@@ -434,6 +483,76 @@ void freeSavefileList(FileList *file_list) {
 }
 
 int main(int argc, char *argv[]) {
+    #ifdef _3DS
+    gfxInitDefault();
+    consoleInit(GFX_TOP, NULL);
+
+    // allocate buffer for SOC service
+    u32 *SOC_buffer = (u32*) memalign(SOC_ALIGN, SOC_BUFFERSIZE);
+    int ret;
+
+    if(SOC_buffer == NULL) {
+        printf("memalign: failed to allocate\n");
+        return -1;
+    }
+
+    // Now intialise soc:u service
+    if ((ret = socInit(SOC_buffer, SOC_BUFFERSIZE)) != 0) {
+        printf("socInit: 0x%08X\n", (unsigned int) ret);
+        return -1;
+    }
+
+    curl_global_init(CURL_GLOBAL_ALL);
+    getLocalCreds();
+    FileList *file_list = getSavefileList();
+
+    printf("Press A to upload files\n");
+    printf("Press B to download files\n");
+
+    while (aptMainLoop()) {
+        hidScanInput();
+        u32 kDown = hidKeysDown();
+
+        if (kDown & KEY_START) break;
+
+        if(kDown & KEY_A) {
+            FileList *cur = file_list;
+            while(cur != NULL) {
+                char* url = getUrlFromGistByFilename(cur->name);
+                if(url == NULL)
+                    createGist(cur->path, cur->name);
+                else
+                    updateGist(cur->path, url);
+
+                cur = cur->next;
+            }
+            printf("upload successful\n");
+        } else if(kDown & KEY_B) {
+            FileList *cur = file_list;
+            while(cur != NULL) {
+                char* url = getUrlFromGistByFilename(cur->name);
+                if(url != NULL)
+                    getAndSaveGist(cur->path, url);
+
+                cur = cur->next;
+            }
+
+            printf("download successful\n");
+        }
+
+        gfxFlushBuffers();
+        gfxSwapBuffers();
+        gspWaitForVBlank();
+    }
+
+    freeSavefileList(file_list);
+    curl_global_cleanup();
+    freeCreds();
+    socExit();
+    gfxExit();
+
+    #else
+
     if(argc == 1) {
         exit_msg_cmd();
     } else if(argv[1][0] == 'p') {
@@ -475,6 +594,8 @@ int main(int argc, char *argv[]) {
     } else {
         exit_msg_cmd();
     }
+
+    #endif
 
     return 0;
 }

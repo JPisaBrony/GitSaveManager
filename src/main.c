@@ -132,7 +132,7 @@ char* openFileAndGetHexString(char* filename) {
 
     if(file == NULL) {
         printf("failed to open file %s\n", filename);
-        return;
+        return NULL;
     }
 
     fseek(file, 0, SEEK_END);
@@ -156,6 +156,8 @@ char* openFileAndGetHexString(char* filename) {
 
 void createGist(char* filename) {
     char* buffer = openFileAndGetHexString(filename);
+    if(buffer == NULL)
+        return;
 
     // construct json object for PATCH request
     json_object *json = json_object_new_object();
@@ -325,6 +327,8 @@ char* getUrlFromGistByFilename(char *filename) {
 
 void updateGist(char* filename, char* url) {
     char* buffer = openFileAndGetHexString(filename);
+    if(buffer == NULL)
+        return;
 
     // construct json object for PATCH request
     json_object *json = json_object_new_object();
@@ -414,29 +418,53 @@ FileList* getSavefileList() {
     return file_list;
 }
 
+void freeSavefileList(FileList *file_list) {
+    FileList *cur = file_list;
+    FileList *temp;
+    while(cur != NULL) {
+        temp = cur;
+        cur = cur->next;
+        free(temp);
+    }
+}
+
 int main(int argc, char *argv[]) {
     if(argc == 1) {
         exit_msg_cmd();
     } else if(argv[1][0] == 'p') {
         curl_global_init(CURL_GLOBAL_ALL);
         getLocalCreds();
+        FileList *file_list = getSavefileList();
 
-        char* url = getUrlFromGistByFilename("somefile");
-        if(url == NULL)
-            createGist("somefile");
-        else
-            updateGist("somefile", url);
+        FileList *cur = file_list;
+        while(cur != NULL) {
+            char* url = getUrlFromGistByFilename(cur->path);
+            if(url == NULL)
+                createGist(cur->path);
+            else
+                updateGist(cur->path, url);
 
+            cur = cur->next;
+        }
+
+        freeSavefileList(file_list);
         curl_global_cleanup();
         freeCreds();
     } else if(argv[1][0] == 'g') {
         curl_global_init(CURL_GLOBAL_ALL);
         getLocalCreds();
+        FileList *file_list = getSavefileList();
 
-        char* url = getUrlFromGistByFilename("somefile");
-        if(url != NULL)
-            getAndSaveGist(url);
+        FileList *cur = file_list;
+        while(cur != NULL) {
+            char* url = getUrlFromGistByFilename(cur->path);
+            if(url != NULL)
+                getAndSaveGist(url);
 
+            cur = cur->next;
+        }
+
+        freeSavefileList(file_list);
         curl_global_cleanup();
         freeCreds();
     } else {

@@ -383,22 +383,24 @@ FileList* getSavefileList() {
         return;
     }
 
-    FileList *file_list = NULL;
-    FileList *iter = NULL;
+    FileList *file_list = malloc(sizeof(FileList));
+    FileList *iter = file_list;
 
     while(getline(&line, &len, file) != -1) {
         FileList *new_node = malloc(sizeof(FileList));
         new_node->path = malloc(len - 1);
         new_node->next = NULL;
         strcpy(new_node->path, strtok(line, "\n"));
-        if(file_list == NULL) {
-            file_list = new_node;
-            iter = file_list;
-        } else {
-            iter->next = new_node;
-            iter = new_node;
-        }
+        iter->next = new_node;
+        iter = new_node;
     }
+
+    // save first node
+    iter = file_list;
+    // fix first node to point to correct one
+    file_list = file_list->next;
+    // free unlinked node
+    free(iter);
 
     FileList *cur = file_list;
     while(cur != NULL) {

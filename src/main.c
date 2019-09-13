@@ -116,7 +116,7 @@ void hexToBinary(char *buffer, int binarySize) {
         vals['a'+i] = 10+i;
     }
 
-    for(i = 0; i < binarySize - 1; i++) {
+    for(i = 0; i < binarySize - 2; i++) {
         raw = vals[buffer[i<<1]]<<4;
         raw |= vals[buffer[(i<<1)+1]];
         buffer[i] = raw;
@@ -236,7 +236,7 @@ void getAndSaveGist(char* filename, char* url) {
         int content_len = strlen(content);
         content[content_len-1] = 0;
 
-        hexToBinary(content, content_len);
+        hexToBinary(content, content_len / 2);
 
         FILE *file = NULL;
         file = fopen(filename, "wb");

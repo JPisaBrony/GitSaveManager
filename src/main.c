@@ -10,43 +10,9 @@
 #define SOC_ALIGN       0x1000
 #define SOC_BUFFERSIZE  0x100000
 
-#define SIZE 256
-int getline(char **lineptr, size_t *n, FILE *stream) {
-    static char line[SIZE];
-    char *ptr;
-    unsigned int len;
-
-    if (lineptr == NULL || n == NULL)
-        return -1;
-
-    if (ferror (stream))
-        return -1;
-
-    if (feof(stream))
-        return -1;
-
-    fgets(line, SIZE, stream);
-
-    ptr = strchr(line,'\n');
-    if (ptr)
-      *ptr = '\0';
-
-    len = strlen(line);
-
-    if ((len + 1) < SIZE) {
-      ptr = realloc(*lineptr, SIZE);
-      if (ptr == NULL)
-         return(-1);
-      *lineptr = ptr;
-      *n = SIZE;
-    }
-
-    strcpy(*lineptr,line);
-    return(len);
-}
-
 #endif
 
+#define MAX_LINE_LENGTH 8192
 #define USERAGENT "curl"
 #define CREDENTIALS_FILE "credentials.txt"
 #define SAVEFILES "savefiles.txt"
@@ -83,9 +49,9 @@ char* STR_concat(char* str0, char* str1) {
 }
 
 void getLocalCreds() {
-    int i;
+    int i = 0;
     FILE *file = NULL;
-    char *line = NULL;
+    char *line = malloc(MAX_LINE_LENGTH);
     size_t len = 0;
 
     file = fopen(CREDENTIALS_FILE, "r");
@@ -95,15 +61,15 @@ void getLocalCreds() {
         return;
     }
 
-    i = 0;
-    while(getline(&line, &len, file) != -1) {
+    while(fgets(line, MAX_LINE_LENGTH, file)) {
+        len = strlen(line);
         if(i == 0) {
             username = malloc(len - 1);
-            strcpy(username, strtok(line, "\n"));
+            strcpy(username, strtok(line, "\r\n"));
             i++;
         } else if(i == 1) {
             password = malloc(len - 1);
-            strcpy(password, strtok(line, "\n"));
+            strcpy(password, strtok(line, "\r\n"));
             i++;
         }
     }
@@ -425,7 +391,7 @@ void exit_msg_cmd() {
 
 FileList* getSavefileList() {
     FILE *file = NULL;
-    char *line = NULL;
+    char *line = malloc(MAX_LINE_LENGTH);
     size_t len = 0;
 
     file = fopen(SAVEFILES, "r");
@@ -438,7 +404,7 @@ FileList* getSavefileList() {
     FileList *file_list = malloc(sizeof(FileList));
     FileList *iter = file_list;
 
-    while(getline(&line, &len, file) != -1) {
+    while(fgets(line, MAX_LINE_LENGTH, file)) {
         FileList *new_node = malloc(sizeof(FileList));
         char* split = strtok(line, " ");
         new_node->path = malloc(strlen(split));

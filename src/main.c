@@ -116,7 +116,7 @@ void hexToBinary(char *buffer, int binarySize) {
         vals['a'+i] = 10+i;
     }
 
-    for(i = 0; i < binarySize - 2; i++) {
+    for(i = 0; i < binarySize - 1; i++) {
         raw = vals[buffer[i<<1]]<<4;
         raw |= vals[buffer[(i<<1)+1]];
         buffer[i] = raw;

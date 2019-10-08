@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <SDL/SDL.h>
+#include <SDL/SDL_ttf.h>
+#include <dirent.h>
+#include <sys/stat.h>
 #include <curl/curl.h>
 #include <json-c/json.h>
 
@@ -10,7 +14,19 @@
 #define SOC_ALIGN       0x1000
 #define SOC_BUFFERSIZE  0x100000
 
+#define SCREEN_WIDTH 400
+#define SCREEN_HEIGHT 240
+#define SDL_FLAGS SDL_FULLSCREEN
+#else
+#define SCREEN_WIDTH 1024
+#define SCREEN_HEIGHT 768
+#define SDL_FLAGS SDL_SWSURFACE
 #endif
+
+#define BPP 8
+#define FONT_SIZE 16
+#define TEXT_HEIGHT 20
+#define SCREEN_SCROLL_SIZE 11
 
 #define MAX_LINE_LENGTH 8192
 #define USERAGENT "curl"
@@ -19,6 +35,27 @@
 
 char* username = NULL;
 char* password = NULL;
+
+int i, j;
+int cur_sel = 0;
+int screen_scroll_lower = 0;
+int screen_scroll_upper = SCREEN_SCROLL_SIZE;
+SDL_Event event;
+SDL_Surface *screen = NULL;
+SDL_Surface *text = NULL;
+TTF_Font *font = NULL;
+SDL_Color text_color;
+SDL_Color sel_text_color_fg;
+SDL_Color sel_text_color_bg;
+SDL_Rect text_pos;
+SDL_Rect sel_box;
+char *selected_path;
+struct dirent **namelist;
+struct dirent **original_namelist;
+int dir_amount = 0;
+int original_dir_amount = 0;
+struct stat stat_check;
+char *stat_path = NULL;
 
 typedef struct {
     char *data;
@@ -448,11 +485,112 @@ void freeSavefileList(FileList *file_list) {
     }
 }
 
-int main(int argc, char *argv[]) {
-    #ifdef _3DS
-    gfxInitDefault();
-    consoleInit(GFX_TOP, NULL);
+void free_namelist() {
+    // free old namelist
+    for(i = 0; i < original_dir_amount; i++)
+        free(original_namelist[i]);
+    free(original_namelist);
+}
 
+void cleanup(FileList *file_list) {
+    #ifdef _3DS
+    romfsExit();
+    socExit();
+    #endif
+    freeSavefileList(file_list);
+    curl_global_cleanup();
+    freeCreds();
+    SDL_FreeSurface(screen);
+    TTF_CloseFont(font);
+    free(selected_path);
+    free_namelist();
+    SDL_Quit();
+}
+
+void reset_scroll_vars() {
+    cur_sel = 0;
+    screen_scroll_lower = 0;
+    screen_scroll_upper = SCREEN_SCROLL_SIZE;
+    if(screen_scroll_upper > dir_amount)
+        screen_scroll_upper = dir_amount + 1;
+}
+
+void scan_directory() {
+    dir_amount = scandir(selected_path, &namelist, NULL, alphasort);
+    // save original pointer and value for freeing later
+    original_dir_amount = dir_amount;
+    original_namelist = namelist;
+
+    if(dir_amount < 0)
+        exit_msg("scandir failed");
+    dir_amount--;
+
+    int inc_amount = 0;
+    if(namelist != NULL) {
+        // check index 0 if it contains either . or ..
+        if(strcmp(namelist[0]->d_name, ".") == 0 || strcmp(namelist[0]->d_name, "..") == 0) {
+            inc_amount++;
+            namelist++;
+        }
+        // check index 0 again if the namelist pointer was increamented to get both . or ..
+        if(strcmp(namelist[0]->d_name, ".") == 0 || strcmp(namelist[0]->d_name, "..") == 0) {
+            inc_amount++;
+            namelist++;
+        }
+    }
+
+    dir_amount -= inc_amount;
+
+    if(screen_scroll_upper > dir_amount)
+        screen_scroll_upper = dir_amount + 1;
+}
+
+int main(int argc, char *argv[]) {
+    if(SDL_Init(SDL_INIT_VIDEO) == -1)
+         exit_msg("Couldn't init SDL");
+
+    screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, BPP, SDL_FLAGS);
+
+    if(screen == NULL)
+        exit_msg("Couldn't init SDL Window");
+
+    if(TTF_Init() == -1)
+        exit_msg("Couldn't init SDL TTF");
+
+    #ifdef _3DS
+    SDL_ShowCursor(SDL_DISABLE);
+    romfsInit();
+    font = TTF_OpenFont("romfs:/FreeMonoBold.ttf", FONT_SIZE);
+    #else
+    font = TTF_OpenFont("FreeMonoBold.ttf", FONT_SIZE);
+    #endif
+
+    if(font == NULL)
+        exit_msg("Failed to open font");
+
+    // set text position
+    text_pos.x = 0;
+    text_pos.y = 0;
+
+    // set text color to white
+    text_color.r = 0xFF;
+    text_color.g = 0xFF;
+    text_color.b = 0xFF;
+
+    // selected text color
+    sel_text_color_bg.r = 0x00;
+    sel_text_color_bg.g = 0x37;
+    sel_text_color_bg.b = 0xFF;
+
+    sel_text_color_fg.r = 0xFF;
+    sel_text_color_fg.g = 0xFF;
+    sel_text_color_fg.b = 0xFF;
+
+    selected_path = malloc(1024);
+    selected_path[0] = '/';
+    selected_path[1] = '\0';
+
+    #ifdef _3DS
     // allocate buffer for SOC service
     u32 *SOC_buffer = (u32*) memalign(SOC_ALIGN, SOC_BUFFERSIZE);
     int ret;
@@ -467,10 +605,118 @@ int main(int argc, char *argv[]) {
         printf("socInit: 0x%08X\n", (unsigned int) ret);
         return -1;
     }
+    #endif
 
     curl_global_init(CURL_GLOBAL_ALL);
     getLocalCreds();
     FileList *file_list = getSavefileList();
+
+    //scan_directory();
+
+    while(1) {
+        // check for pending events
+        while(SDL_PollEvent(&event)) {
+            // quit was requested
+            if(event.type == SDL_QUIT) {
+                cleanup(file_list);
+                return 0;
+            // keyboard button was hit
+            } else if (event.type == SDL_KEYDOWN) {
+                // check which key was hit
+                switch(event.key.keysym.sym) {
+                    // quit
+                    case SDLK_ESCAPE:
+                    case 'q':
+                        cleanup(file_list);
+                        return 0;
+                    case SDLK_b:
+                    case SDLK_BACKSPACE:
+                        j = 0;
+                        for(i = strlen(selected_path); i >= 0; i--) {
+                            if(selected_path[i] == '/') {
+                                j++;
+                            }
+
+                            if(j == 2) {
+                                selected_path[i+1] = '\0';
+                                break;
+                            }
+                        }
+
+                        free_namelist();
+                        scan_directory();
+                        reset_scroll_vars();
+                        break;
+                    case SDLK_a:
+                    case SDLK_RETURN:
+                        if(dir_amount > -1) {
+                            stat_path = malloc((strlen(selected_path) * sizeof(char*)) + (strlen(namelist[cur_sel]->d_name) * sizeof(char*)));
+                            strcpy(stat_path, selected_path);
+                            strcat(stat_path, namelist[cur_sel]->d_name);
+                            stat(stat_path, &stat_check);
+                            free(stat_path);
+                            if(!S_ISREG(stat_check.st_mode)) {
+                                strcat(selected_path, namelist[cur_sel]->d_name);
+                                strcat(selected_path, "/");
+
+                                free_namelist();
+                                scan_directory();
+                                reset_scroll_vars();
+                            } else {
+                                //printf("%s is file\n", namelist[cur_sel]->d_name);
+                            }
+                        }
+                        break;
+                    case SDLK_UP:
+                        if(cur_sel > 0)
+                            cur_sel--;
+                        break;
+                    case SDLK_DOWN:
+                        if(cur_sel < dir_amount)
+                            cur_sel++;
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+        // clear screen
+        SDL_FillRect(screen, NULL, 0x00000000);
+
+        if(cur_sel >= screen_scroll_upper && cur_sel <= dir_amount) {
+            screen_scroll_lower++;
+            screen_scroll_upper++;
+        } else if(cur_sel < screen_scroll_lower && cur_sel > -1) {
+            screen_scroll_lower--;
+            screen_scroll_upper--;
+        }
+
+        if(namelist != NULL) {
+            j = 0;
+            for(i = screen_scroll_lower; i < screen_scroll_upper; i++) {
+                // update text pos
+                text_pos.y = j * TEXT_HEIGHT;
+                if(cur_sel == i) {
+                    // create text with font and selected color
+                    text = TTF_RenderText_Shaded(font, namelist[i]->d_name, sel_text_color_fg, sel_text_color_bg);
+                } else {
+                    // create text with the font and color
+                    text = TTF_RenderText_Solid(font, namelist[i]->d_name, text_color);
+                }
+                // blit the text to the screen
+                SDL_BlitSurface(text, NULL, screen, &text_pos);
+                // free the text to prevent memory leaks
+                SDL_FreeSurface(text);
+                j++;
+            }
+        }
+
+        if(SDL_Flip(screen) == -1)
+            exit_msg("Failed to SDL_Flip");
+    }
+
+    /*
+    #ifdef _3DS
 
     printf("Press A to upload files\n");
     printf("Press B to download files\n");
@@ -562,6 +808,7 @@ int main(int argc, char *argv[]) {
     }
 
     #endif
+    */
 
     return 0;
 }

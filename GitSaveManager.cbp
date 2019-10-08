@@ -11,6 +11,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
+				<Option parameters="g" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -34,6 +35,9 @@
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
+		<Linker>
+			<Add option="-lSDL -lSDL_ttf" />
+		</Linker>
 		<Unit filename="src/main.c">
 			<Option compilerVar="CC" />
 		</Unit>

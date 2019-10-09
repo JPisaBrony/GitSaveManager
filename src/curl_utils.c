@@ -12,7 +12,7 @@ FileList* getSavefileList() {
 
     if(file == NULL) {
         printf("failed to open file %s\n", SAVEFILES);
-        return;
+        return NULL;
     }
 
     FileList *file_list = malloc(sizeof(FileList));

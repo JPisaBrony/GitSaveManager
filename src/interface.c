@@ -21,6 +21,27 @@ SDL_Color sel_text_color_bg;
 SDL_Rect text_pos;
 SDL_Surface *screen = NULL;
 
+void free_namelist() {
+    if(original_namelist != NULL) {
+        // free old namelist
+        for(i = 0; i < original_dir_amount; i++)
+            free(original_namelist[i]);
+        free(original_namelist);
+    }
+}
+
+void cleanup() {
+    #ifdef _3DS
+    romfsExit();
+    socExit();
+    #endif
+    SDL_FreeSurface(screen);
+    TTF_CloseFont(font);
+    free(selected_path);
+    free_namelist();
+    SDL_Quit();
+}
+
 void scan_directory() {
     dir_amount = scandir(selected_path, &namelist, NULL, alphasort);
     // save original pointer and value for freeing later
@@ -58,15 +79,6 @@ void reset_selected_path() {
     }
 }
 
-void free_namelist() {
-    if(original_namelist != NULL) {
-        // free old namelist
-        for(i = 0; i < original_dir_amount; i++)
-            free(original_namelist[i]);
-        free(original_namelist);
-    }
-}
-
 void reset_scroll_vars() {
     cur_sel = 0;
     screen_scroll_lower = 0;
@@ -81,7 +93,7 @@ void main_screen_keyboard() {
         case SDLK_ESCAPE:
         case 'q':
             cleanup();
-            return 0;
+            exit(0);
         case 'a':
             current_interface = SELECTION_SCREEN;
             scan_directory();
@@ -246,18 +258,6 @@ void interface_init() {
     #endif
 }
 
-void cleanup() {
-    #ifdef _3DS
-    romfsExit();
-    socExit();
-    #endif
-    SDL_FreeSurface(screen);
-    TTF_CloseFont(font);
-    free(selected_path);
-    free_namelist();
-    SDL_Quit();
-}
-
 void main_interface() {
     while(1) {
         // check for pending events
@@ -265,7 +265,7 @@ void main_interface() {
             // quit was requested
             if(event.type == SDL_QUIT) {
                 cleanup();
-                return 0;
+                exit(0);
             // keyboard button was hit
             } else if (event.type == SDL_KEYDOWN) {
                 switch(current_interface) {

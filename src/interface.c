@@ -12,6 +12,7 @@ int original_dir_amount = 0;
 struct stat stat_check;
 char *stat_path = NULL;
 int current_interface = 0;
+FileList *files;
 SDL_Event event;
 SDL_Surface *text = NULL;
 TTF_Font *font = NULL;
@@ -89,12 +90,12 @@ void reset_scroll_vars() {
         screen_scroll_upper = dir_amount + 1;
 }
 
-void render_text(char* text, int x, int y) {
+void render_text(char* msg, int x, int y) {
     // set text position
     text_pos.x = x;
     text_pos.y = y;
     // create text with the font and color
-    text = TTF_RenderText_Solid(font, text, text_color);
+    text = TTF_RenderText_Solid(font, msg, text_color);
     // blit the text to the screen
     SDL_BlitSurface(text, NULL, screen, &text_pos);
     // free the text to prevent memory leaks
@@ -109,6 +110,7 @@ void main_screen_keyboard() {
             cleanup();
             exit(0);
         case 'x':
+            files = get_filelist();
             current_interface = MANAGED_FILE_SCREEN;
             break;
         case 'z':
@@ -142,29 +144,41 @@ void managed_files_screen_keyboard() {
 void managed_files_screen_render() {
     render_text("Managed Files", 0, 0);
 
-    FileList *files = get_filelist();
-
     int i = TEXT_HEIGHT * 2;
-    char* full_text = malloc(1024);
-    FileList *cur = files;
-    while(cur != NULL) {
-        sprintf(full_text, "%s : %s", cur->name, cur->path);
-        render_text(full_text, 0, i);
-        cur = cur->next;
-        i += TEXT_HEIGHT;
-        // make sure to render on the screen
-        if(i / TEXT_HEIGHT > SCREEN_SCROLL_SIZE - 2)
-            break;
+
+    if(files == NULL) {
+        render_text("No currently managed files", 0, i);
+    } else {
+        char* full_text = malloc(MAX_LINE_LENGTH);
+        FileList *cur = files;
+        while(cur != NULL) {
+            sprintf(full_text, "%s : %s", cur->name, cur->path);
+            render_text(full_text, 0, i);
+            cur = cur->next;
+            i += TEXT_HEIGHT;
+            // make sure to render on the screen
+            if(i / TEXT_HEIGHT > SCREEN_SCROLL_SIZE - 2)
+                break;
+        }
+        free(full_text);
     }
-    free(full_text);
 }
 
 void selection_confirm_screen_keyboard() {
+    char* data;
     switch(event.key.keysym.sym) {
         case 's':
             current_interface = SELECTION_SCREEN;
             break;
         case 'a':
+            data = malloc(MAX_LINE_LENGTH);
+            strcpy(data, namelist[cur_sel]->d_name);
+            strcat(data, " ");
+            strcat(data, selected_path);
+            strcat(data, namelist[cur_sel]->d_name);
+            strcat(data, "\n");
+            append_data_to_save_file(data);
+            free(data);
             current_interface = MAIN_SCREEN;
             break;
         default:
@@ -312,18 +326,14 @@ void interface_init() {
     #ifdef _3DS
     // allocate buffer for SOC service
     u32 *SOC_buffer = (u32*) memalign(SOC_ALIGN, SOC_BUFFERSIZE);
-    int ret;
-
-    if(SOC_buffer == NULL) {
-        printf("memalign: failed to allocate\n");
-        return -1;
-    }
+    if(SOC_buffer == NULL)
+        exit_msg("memalign: failed to allocate\n");
 
     // Now intialise soc:u service
-    if ((ret = socInit(SOC_buffer, SOC_BUFFERSIZE)) != 0) {
-        printf("socInit: 0x%08X\n", (unsigned int) ret);
-        return -1;
-    }
+    int ret;
+    if ((ret = socInit(SOC_buffer, SOC_BUFFERSIZE)) != 0)
+        exit_msg("socInit failed\n");
+
     #endif
 }
 

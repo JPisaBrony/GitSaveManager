@@ -92,7 +92,7 @@ void getAndSaveGist(char* filename, char* url) {
         int content_len = strlen(content);
         content[content_len-1] = 0;
 
-        hexToBinary(content, content_len / 2);
+        hex_to_binary(content, content_len / 2);
 
         FILE *file = NULL;
         file = fopen(filename, "wb");

@@ -38,6 +38,17 @@
 		<Linker>
 			<Add option="-lSDL -lSDL_ttf" />
 		</Linker>
+		<Unit filename="src/curl_utils.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/curl_utils.h" />
+		<Unit filename="src/file_utils.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/file_utils.h" />
+		<Unit filename="src/global.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="src/global.h" />
 		<Unit filename="src/interface.c">
 			<Option compilerVar="CC" />

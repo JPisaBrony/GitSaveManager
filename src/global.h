@@ -30,7 +30,6 @@
 
 // global functions
 void exit_msg(char* msg);
-void exit_msg_cmd();
 
 // additional project includes
 #include "interface.h"

@@ -17,7 +17,8 @@ char* get_username();
 char* get_password();
 FileList* get_filelist();
 char* open_file_and_get_hex_string(char* filename);
-void binaryToHex(char *doubleSizedCharBuffer, int binarySize);
-void hexToBinary(char *buffer, int binarySize);
+void append_data_to_save_file(char* data);
+void hex_to_binary(char *doubleSizedCharBuffer, int binarySize);
+void hex_to_binary(char *buffer, int binarySize);
 
 #endif

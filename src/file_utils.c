@@ -2,7 +2,7 @@
 
 char* username = NULL;
 char* password = NULL;
-FileList *file_list = NULL;
+FileList *filelist = NULL;
 
 char* get_username() {
     return username;
@@ -12,11 +12,7 @@ char* get_password() {
     return password;
 }
 
-FileList* get_filelist() {
-    return file_list;
-}
-
-void hexToBinary(char *buffer, int binarySize) {
+void hex_to_binary(char *buffer, int binarySize) {
     int i;
     char raw;
     char vals[256];
@@ -36,7 +32,7 @@ void hexToBinary(char *buffer, int binarySize) {
     }
 }
 
-void binaryToHex(char *doubleSizedCharBuffer, int binarySize) {
+void binary_to_hex(char *doubleSizedCharBuffer, int binarySize) {
 	const char hex[16]={'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
 	int i;
 	char buff;
@@ -72,42 +68,41 @@ char* open_file_and_get_hex_string(char* filename) {
 
     fclose(file);
 
-    binaryToHex(buffer, binarySize);
+    binary_to_hex(buffer, binarySize);
 
     return buffer;
 }
 
-FileList* getSavefileList() {
+FileList* get_save_filelist() {
     FILE *file = NULL;
     char *line = malloc(MAX_LINE_LENGTH);
+    char* split;
 
     file = fopen(SAVEFILES, "r");
 
-    if(file == NULL) {
-        printf("failed to open file %s\n", SAVEFILES);
+    if(file == NULL)
         return NULL;
-    }
 
-    FileList *file_list = malloc(sizeof(FileList));
-    FileList *iter = file_list;
+    FileList *filelist = malloc(sizeof(FileList));
+    FileList *iter = filelist;
 
     while(fgets(line, MAX_LINE_LENGTH, file)) {
         FileList *new_node = malloc(sizeof(FileList));
-        char* split = strtok(line, " ");
-        new_node->path = malloc(strlen(split));
-        strcpy(new_node->path, split);
+        split = strtok(line, " ");
+        new_node->name = malloc(strlen(split) + 1);
+        strcpy(new_node->name, split);
         split = strtok(NULL, " ");
-        new_node->name = malloc(strlen(split) - 1);
-        strcpy(new_node->name, strtok(split, "\n"));
+        new_node->path = malloc(strlen(split) + 1);
+        strcpy(new_node->path, strtok(split, "\n"));
         new_node->next = NULL;
         iter->next = new_node;
         iter = new_node;
     }
 
     // save first node
-    iter = file_list;
+    iter = filelist;
     // fix first node to point to correct one
-    file_list = file_list->next;
+    filelist = filelist->next;
     // free unlinked node
     free(iter);
 
@@ -115,11 +110,24 @@ FileList* getSavefileList() {
     fclose(file);
     free(line);
 
-    return file_list;
+    return filelist;
 }
 
-void freeSavefileList(FileList *file_list) {
-    FileList *cur = file_list;
+void append_data_to_save_file(char* data) {
+    FILE *file = NULL;
+
+    file = fopen(SAVEFILES, "a");
+
+    if(file == NULL)
+        exit_msg("failed to open file " SAVEFILES);
+
+    fputs(data, file);
+
+    fclose(file);
+}
+
+void free_save_filelist() {
+    FileList *cur = filelist;
     FileList *temp;
     while(cur != NULL) {
         temp = cur;
@@ -128,7 +136,7 @@ void freeSavefileList(FileList *file_list) {
     }
 }
 
-void getLocalCreds() {
+void get_local_creds() {
     int i = 0;
     FILE *file = NULL;
     char *line = malloc(MAX_LINE_LENGTH);
@@ -158,17 +166,26 @@ void getLocalCreds() {
     free(line);
 }
 
-void freeCreds() {
+FileList* get_filelist() {
+    // reset the filelist incase it changed
+    free_save_filelist(filelist);
+    // get the filelist
+    filelist = get_save_filelist();
+    // return the filelist if it exists
+    // otherwise the filelist will be NULL
+    return filelist;
+}
+
+void free_creds() {
     free(username);
     free(password);
 }
 
 void file_cleanup() {
-    freeSavefileList(file_list);
-    freeCreds();
+    free_save_filelist(filelist);
+    free_creds();
 }
 
 void file_init() {
-    getLocalCreds();
-    file_list = getSavefileList();
+    get_local_creds();
 }

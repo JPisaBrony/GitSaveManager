@@ -3,6 +3,7 @@
 int main(int argc, char *argv[]) {
     interface_init();
     curl_init();
+    file_init();
     main_interface();
 
     /*

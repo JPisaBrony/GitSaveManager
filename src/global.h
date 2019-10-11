@@ -34,6 +34,7 @@ void exit_msg_cmd();
 
 // additional project includes
 #include "interface.h"
+#include "file_utils.h"
 #include "curl_utils.h"
 
 #endif

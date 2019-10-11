@@ -1,119 +1,5 @@
 #include "global.h"
 
-char* username = NULL;
-char* password = NULL;
-FileList *file_list = NULL;
-
-FileList* getSavefileList() {
-    FILE *file = NULL;
-    char *line = malloc(MAX_LINE_LENGTH);
-
-    file = fopen(SAVEFILES, "r");
-
-    if(file == NULL) {
-        printf("failed to open file %s\n", SAVEFILES);
-        return NULL;
-    }
-
-    FileList *file_list = malloc(sizeof(FileList));
-    FileList *iter = file_list;
-
-    while(fgets(line, MAX_LINE_LENGTH, file)) {
-        FileList *new_node = malloc(sizeof(FileList));
-        char* split = strtok(line, " ");
-        new_node->path = malloc(strlen(split));
-        strcpy(new_node->path, split);
-        split = strtok(NULL, " ");
-        new_node->name = malloc(strlen(split) - 1);
-        strcpy(new_node->name, strtok(split, "\n"));
-        new_node->next = NULL;
-        iter->next = new_node;
-        iter = new_node;
-    }
-
-    // save first node
-    iter = file_list;
-    // fix first node to point to correct one
-    file_list = file_list->next;
-    // free unlinked node
-    free(iter);
-
-    printf("currently tracked files\n");
-    FileList *cur = file_list;
-    while(cur != NULL) {
-        printf("%s\n", cur->path);
-        cur = cur->next;
-    }
-    printf("\n");
-
-    fclose(file);
-    free(line);
-
-    return file_list;
-}
-
-void freeSavefileList(FileList *file_list) {
-    FileList *cur = file_list;
-    FileList *temp;
-    while(cur != NULL) {
-        temp = cur;
-        cur = cur->next;
-        free(temp);
-    }
-}
-
-char* STR_concat(char* str0, char* str1) {
-    int len0 = strlen(str0);
-    int len1 = strlen(str1);
-    int len = len0 + len1;
-    if(len > 999999999) {
-        return NULL;
-    }
-    len+=1;
-    char* buffer = malloc(len);
-
-    strcpy(buffer, str0);
-    strcat(buffer, str1);
-    buffer[len-1]='\0';
-
-    return buffer;
-}
-
-void getLocalCreds() {
-    int i = 0;
-    FILE *file = NULL;
-    char *line = malloc(MAX_LINE_LENGTH);
-    size_t len = 0;
-
-    file = fopen(CREDENTIALS_FILE, "r");
-
-    if(file == NULL) {
-        printf("failed to open file %s\n", CREDENTIALS_FILE);
-        return;
-    }
-
-    while(fgets(line, MAX_LINE_LENGTH, file)) {
-        len = strlen(line);
-        if(i == 0) {
-            username = malloc(len - 1);
-            strcpy(username, strtok(line, "\r\n"));
-            i++;
-        } else if(i == 1) {
-            password = malloc(len - 1);
-            strcpy(password, strtok(line, "\r\n"));
-            i++;
-        }
-    }
-
-    fclose(file);
-    free(line);
-}
-
-void freeCreds() {
-    free(username);
-    free(password);
-}
-
 static size_t CurlReturnCallback(void *data, size_t size, size_t nmemb, void *curl_ret) {
     size_t realsize = size * nmemb;
     CurlReturn *ret = (CurlReturn *) curl_ret;
@@ -134,69 +20,8 @@ static size_t CurlReturnCallback(void *data, size_t size, size_t nmemb, void *cu
     return 0;
 }
 
-void hexToBinary(char *buffer, int binarySize) {
-    int i;
-    char raw;
-    char vals[256];
-
-    for(i = 0; i < 10; i++){
-        vals['0'+i] = i;
-    }
-    for(i = 0; i < 6; i++){
-        vals['A'+i] = 10+i;
-        vals['a'+i] = 10+i;
-    }
-
-    for(i = 0; i < binarySize - 1; i++) {
-        raw = vals[buffer[i<<1]]<<4;
-        raw |= vals[buffer[(i<<1)+1]];
-        buffer[i] = raw;
-    }
-}
-
-void binaryToHex(char *doubleSizedCharBuffer, int binarySize) {
-	const char hex[16]={'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
-	int i;
-	char buff;
-
-	for(i=binarySize-1; i > -1; i--){
-		buff = doubleSizedCharBuffer[i];
-		doubleSizedCharBuffer[i<<1] = hex[(buff>>4) & 0xF];
-		doubleSizedCharBuffer[(i<<1)+1] = hex[buff & 0xF];
-    }
-}
-
-char* openFileAndGetHexString(char* filename) {
-    int i, c;
-    FILE *file = NULL;
-    file = fopen(filename, "rb");
-
-    if(file == NULL) {
-        printf("failed to open file %s\n", filename);
-        return NULL;
-    }
-
-    fseek(file, 0, SEEK_END);
-    int binarySize = ftell(file);
-    fseek(file, 0, SEEK_SET);
-
-    char *buffer = malloc(binarySize << 2);
-
-    i = 0;
-    while((c = fgetc(file)) != EOF) {
-        buffer[i] = c;
-        i++;
-    }
-
-    fclose(file);
-
-    binaryToHex(buffer, binarySize);
-
-    return buffer;
-}
-
 void createGist(char* path, char* filename) {
-    char* buffer = openFileAndGetHexString(path);
+    char* buffer = open_file_and_get_hex_string(path);
     if(buffer == NULL)
         return;
 
@@ -216,8 +41,8 @@ void createGist(char* path, char* filename) {
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_object_to_json_string(json));
         curl_easy_setopt(curl, CURLOPT_USERAGENT, USERAGENT);
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-        curl_easy_setopt(curl, CURLOPT_USERNAME, username);
-        curl_easy_setopt(curl, CURLOPT_PASSWORD, password);
+        curl_easy_setopt(curl, CURLOPT_USERNAME, get_username());
+        curl_easy_setopt(curl, CURLOPT_PASSWORD, get_password());
 
         CURLcode res = curl_easy_perform(curl);
 
@@ -295,8 +120,8 @@ char* getUrlFromGistByFilename(char *filename) {
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &curl_ret);
         curl_easy_setopt(curl, CURLOPT_USERAGENT, USERAGENT);
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-        curl_easy_setopt(curl, CURLOPT_USERNAME, username);
-        curl_easy_setopt(curl, CURLOPT_PASSWORD, password);
+        curl_easy_setopt(curl, CURLOPT_USERNAME, get_username());
+        curl_easy_setopt(curl, CURLOPT_PASSWORD, get_password());
 
         CURLcode res = curl_easy_perform(curl);
 
@@ -329,7 +154,7 @@ char* getUrlFromGistByFilename(char *filename) {
 }
 
 void updateGist(char* filename, char* url) {
-    char* buffer = openFileAndGetHexString(filename);
+    char* buffer = open_file_and_get_hex_string(filename);
     if(buffer == NULL)
         return;
 
@@ -350,8 +175,8 @@ void updateGist(char* filename, char* url) {
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_object_to_json_string(json));
         curl_easy_setopt(curl, CURLOPT_USERAGENT, USERAGENT);
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-        curl_easy_setopt(curl, CURLOPT_USERNAME, username);
-        curl_easy_setopt(curl, CURLOPT_PASSWORD, password);
+        curl_easy_setopt(curl, CURLOPT_USERNAME, get_username());
+        curl_easy_setopt(curl, CURLOPT_PASSWORD, get_password());
 
         CURLcode res = curl_easy_perform(curl);
 
@@ -370,13 +195,9 @@ void updateGist(char* filename, char* url) {
 }
 
 void curl_cleanup() {
-    freeSavefileList(file_list);
     curl_global_cleanup();
-    freeCreds();
 }
 
 void curl_init() {
     curl_global_init(CURL_GLOBAL_ALL);
-    getLocalCreds();
-    file_list = getSavefileList();
 }

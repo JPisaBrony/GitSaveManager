@@ -35,6 +35,8 @@ void cleanup() {
     romfsExit();
     socExit();
     #endif
+    curl_cleanup();
+    file_cleanup();
     SDL_FreeSurface(screen);
     TTF_CloseFont(font);
     free(selected_path);
@@ -87,6 +89,18 @@ void reset_scroll_vars() {
         screen_scroll_upper = dir_amount + 1;
 }
 
+void render_text(char* text, int x, int y) {
+    // set text position
+    text_pos.x = x;
+    text_pos.y = y;
+    // create text with the font and color
+    text = TTF_RenderText_Solid(font, text, text_color);
+    // blit the text to the screen
+    SDL_BlitSurface(text, NULL, screen, &text_pos);
+    // free the text to prevent memory leaks
+    SDL_FreeSurface(text);
+}
+
 void main_screen_keyboard() {
     switch(event.key.keysym.sym) {
         // quit
@@ -94,26 +108,81 @@ void main_screen_keyboard() {
         case 'q':
             cleanup();
             exit(0);
-        case 'a':
+        case 'x':
+            current_interface = MANAGED_FILE_SCREEN;
+            break;
+        case 'z':
             current_interface = SELECTION_SCREEN;
+            reset_selected_path();
             scan_directory();
+            reset_scroll_vars();
             break;
         default:
             break;
-        break;
     }
 }
 
 void main_screen_render() {
+    render_text("Git Save Manager", 0, 0);
+    render_text("Press Y (3DS) or Z (Desktop) to add files to be managed", 0, TEXT_HEIGHT * 2);
+    render_text("Press X to view managed files", 0, TEXT_HEIGHT * 3);
+    render_text("Press Select (3DS) or q (Desktop) to quit", 0, TEXT_HEIGHT * 4);
+}
 
+void managed_files_screen_keyboard() {
+    switch(event.key.keysym.sym) {
+        case 's':
+            current_interface = MAIN_SCREEN;
+            break;
+        default:
+            break;
+    }
+}
+
+void managed_files_screen_render() {
+    render_text("Managed Files", 0, 0);
+
+    FileList *files = get_filelist();
+
+    int i = TEXT_HEIGHT * 2;
+    char* full_text = malloc(1024);
+    FileList *cur = files;
+    while(cur != NULL) {
+        sprintf(full_text, "%s : %s", cur->name, cur->path);
+        render_text(full_text, 0, i);
+        cur = cur->next;
+        i += TEXT_HEIGHT;
+        // make sure to render on the screen
+        if(i / TEXT_HEIGHT > SCREEN_SCROLL_SIZE - 2)
+            break;
+    }
+    free(full_text);
+}
+
+void selection_confirm_screen_keyboard() {
+    switch(event.key.keysym.sym) {
+        case 's':
+            current_interface = SELECTION_SCREEN;
+            break;
+        case 'a':
+            current_interface = MAIN_SCREEN;
+            break;
+        default:
+            break;
+    }
+}
+
+void selection_confirm_screen_render() {
+    render_text("Manage this file?", 0, 0);
+    render_text(namelist[cur_sel]->d_name, 0, TEXT_HEIGHT * 2);
+    render_text("Yes - Press A", 0, TEXT_HEIGHT * 4);
+    render_text("No - Press B", 0, TEXT_HEIGHT * 5);
 }
 
 void selection_screen_keyboard() {
     switch(event.key.keysym.sym) {
         case 'q':
             current_interface = MAIN_SCREEN;
-            free_namelist();
-            reset_selected_path();
             break;
         case SDLK_b:
         case SDLK_BACKSPACE:
@@ -149,7 +218,7 @@ void selection_screen_keyboard() {
                     scan_directory();
                     reset_scroll_vars();
                 } else {
-                    //printf("%s is file\n", namelist[cur_sel]->d_name);
+                    current_interface = SELECTION_CONFIRM_SCREEN;
                 }
             }
             break;
@@ -271,8 +340,16 @@ void main_interface() {
                 switch(current_interface) {
                     case MAIN_SCREEN:
                         main_screen_keyboard();
+                        break;
+                    case MANAGED_FILE_SCREEN:
+                        managed_files_screen_keyboard();
+                        break;
                     case SELECTION_SCREEN:
                         selection_screen_keyboard();
+                        break;
+                    case SELECTION_CONFIRM_SCREEN:
+                        selection_confirm_screen_keyboard();
+                        break;
                 }
             }
         }
@@ -283,8 +360,14 @@ void main_interface() {
             case MAIN_SCREEN:
                 main_screen_render();
                 break;
+            case MANAGED_FILE_SCREEN:
+                managed_files_screen_render();
+                break;
             case SELECTION_SCREEN:
                 selection_screen_render();
+                break;
+            case SELECTION_CONFIRM_SCREEN:
+                selection_confirm_screen_render();
                 break;
         }
 

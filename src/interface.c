@@ -165,20 +165,15 @@ void managed_files_screen_render() {
 }
 
 void selection_confirm_screen_keyboard() {
-    char* data;
+    FileList *node;
     switch(event.key.keysym.sym) {
         case 's':
             current_interface = SELECTION_SCREEN;
             break;
         case 'a':
-            data = malloc(MAX_LINE_LENGTH);
-            strcpy(data, namelist[cur_sel]->d_name);
-            strcat(data, " ");
-            strcat(data, selected_path);
-            strcat(data, namelist[cur_sel]->d_name);
-            strcat(data, "\n");
-            append_data_to_save_file(data);
-            free(data);
+            node = create_filelist_node(selected_path, namelist[cur_sel]->d_name);
+            append_node_to_save_file(node);
+            free_filelist_node(node);
             current_interface = MAIN_SCREEN;
             break;
         default:

@@ -73,36 +73,43 @@ char* open_file_and_get_hex_string(char* filename) {
     return buffer;
 }
 
-FileList* get_save_filelist() {
+FileList* create_filelist_node(char* path, char* name) {
+    FileList *node = malloc(sizeof(FileList));
+    node->path = malloc(strlen(path) + 1);
+    strcpy(node->path, path);
+    node->name = malloc(strlen(name) + 1);
+    strcpy(node->name, name);
+    node->next = NULL;
+    return node;
+}
+
+FileList* get_filelist_from_save_file() {
     FILE *file = NULL;
     char *line = malloc(MAX_LINE_LENGTH);
-    char* split;
+    char* name;
+    char* path;
 
     file = fopen(SAVEFILES, "r");
 
     if(file == NULL)
         return NULL;
 
-    FileList *filelist = malloc(sizeof(FileList));
-    FileList *iter = filelist;
+    FileList *list = malloc(sizeof(FileList));
+    FileList *iter = list;
 
     while(fgets(line, MAX_LINE_LENGTH, file)) {
-        FileList *new_node = malloc(sizeof(FileList));
-        split = strtok(line, " ");
-        new_node->name = malloc(strlen(split) + 1);
-        strcpy(new_node->name, split);
-        split = strtok(NULL, " ");
-        new_node->path = malloc(strlen(split) + 1);
-        strcpy(new_node->path, strtok(split, "\n"));
-        new_node->next = NULL;
+        name = strtok(line, " ");
+        path = strtok(NULL, " ");
+        path = strtok(path, "\n");
+        FileList *new_node = create_filelist_node(path, name);
         iter->next = new_node;
         iter = new_node;
     }
 
     // save first node
-    iter = filelist;
+    iter = list;
     // fix first node to point to correct one
-    filelist = filelist->next;
+    list = list->next;
     // free unlinked node
     free(iter);
 
@@ -110,10 +117,37 @@ FileList* get_save_filelist() {
     fclose(file);
     free(line);
 
-    return filelist;
+    return list;
 }
 
-void append_data_to_save_file(char* data) {
+void write_save_file_from_filelist(FileList *list) {
+    FILE *file = NULL;
+    char *line;
+    FileList *cur = list;
+
+    file = fopen(SAVEFILES, "w");
+
+    if(file == NULL)
+        exit_msg("failed to open file " SAVEFILES);
+
+    while(cur != NULL) {
+        line = malloc(MAX_LINE_LENGTH);
+        strcpy(line, cur->name);
+        strcat(line, " ");
+        strcat(line, cur->path);
+        fputs(line, file);
+        free(line);
+        cur = cur->next;
+    }
+
+    // cleanup
+    fclose(file);
+}
+
+void append_node_to_save_file(FileList *node) {
+    if(node == NULL)
+        return;
+
     FILE *file = NULL;
 
     file = fopen(SAVEFILES, "a");
@@ -121,18 +155,58 @@ void append_data_to_save_file(char* data) {
     if(file == NULL)
         exit_msg("failed to open file " SAVEFILES);
 
-    fputs(data, file);
+    char *line = malloc(MAX_LINE_LENGTH);
+    strcpy(line, node->name);
+    strcat(line, " ");
+    strcat(line, node->path);
+    strcat(line, node->name);
+    strcat(line, "\n");
+    fputs(line, file);
+    free(line);
 
     fclose(file);
 }
 
-void free_save_filelist() {
+void delete_node_from_filelist(FileList **list, int node_number) {
+    int i = 0;
+    FileList *cur = *list;
+    FileList *temp = NULL;
+
+    if(*list == NULL)
+        return;
+
+    if(node_number == 0) {
+        temp = (*list)->next;
+        free(*list);
+        *list = temp;
+        return;
+    }
+
+    while(cur != NULL) {
+        if(i == node_number) {
+            temp->next = cur->next;
+            free(cur);
+            break;
+        }
+        temp = cur;
+        cur = cur->next;
+        i++;
+    }
+}
+
+void free_filelist_node(FileList *node) {
+    free(node->path);
+    free(node->name);
+    free(node);
+}
+
+void free_filelist() {
     FileList *cur = filelist;
     FileList *temp;
     while(cur != NULL) {
         temp = cur;
         cur = cur->next;
-        free(temp);
+        free_filelist_node(temp);
     }
 }
 
@@ -145,6 +219,7 @@ void get_local_creds() {
     file = fopen(CREDENTIALS_FILE, "r");
 
     if(file == NULL) {
+        free(line);
         printf("failed to open file %s\n", CREDENTIALS_FILE);
         return;
     }
@@ -168,9 +243,9 @@ void get_local_creds() {
 
 FileList* get_filelist() {
     // reset the filelist incase it changed
-    free_save_filelist(filelist);
+    free_filelist();
     // get the filelist
-    filelist = get_save_filelist();
+    filelist = get_filelist_from_save_file();
     // return the filelist if it exists
     // otherwise the filelist will be NULL
     return filelist;
@@ -182,7 +257,7 @@ void free_creds() {
 }
 
 void file_cleanup() {
-    free_save_filelist(filelist);
+    free_filelist();
     free_creds();
 }
 

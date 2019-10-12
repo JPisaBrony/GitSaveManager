@@ -113,6 +113,7 @@ void main_screen_keyboard() {
             files = get_filelist();
             current_interface = MANAGED_FILE_SCREEN;
             break;
+        case 'y':
         case 'z':
             current_interface = SELECTION_SCREEN;
             reset_selected_path();
@@ -133,6 +134,7 @@ void main_screen_render() {
 
 void managed_files_screen_keyboard() {
     switch(event.key.keysym.sym) {
+        case 'b':
         case 's':
             current_interface = MAIN_SCREEN;
             break;
@@ -167,6 +169,7 @@ void managed_files_screen_render() {
 void selection_confirm_screen_keyboard() {
     FileList *node;
     switch(event.key.keysym.sym) {
+        case 'b':
         case 's':
             current_interface = SELECTION_SCREEN;
             break;
@@ -190,10 +193,11 @@ void selection_confirm_screen_render() {
 
 void selection_screen_keyboard() {
     switch(event.key.keysym.sym) {
+        case 'y':
         case 'q':
             current_interface = MAIN_SCREEN;
             break;
-        case SDLK_b:
+        case 'b':
         case SDLK_BACKSPACE:
             j = 0;
             for(i = strlen(selected_path); i >= 0; i--) {
@@ -211,7 +215,7 @@ void selection_screen_keyboard() {
             scan_directory();
             reset_scroll_vars();
             break;
-        case SDLK_a:
+        case 'a':
         case SDLK_RETURN:
             if(dir_amount > -1) {
                 stat_path = malloc((strlen(selected_path) * sizeof(char*)) + (strlen(namelist[cur_sel]->d_name) * sizeof(char*)));

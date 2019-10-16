@@ -167,9 +167,16 @@ void find_current_file_node() {
 }
 
 void upload_file_screen_keyboard() {
+    char *url = NULL;
     switch(event.key.keysym.sym) {
         case 'a':
         case SDLK_RETURN:
+            url = getUrlFromGistByFilename(cur_file->name);
+            if(url == NULL)
+                createGist(cur_file->path, cur_file->name);
+            else
+                updateGist(cur_file->name, cur_file->path, url);
+            current_interface = MANAGED_FILE_SCREEN;
             break;
         case 'b':
         case 's':
@@ -185,6 +192,7 @@ void upload_file_screen_keyboard() {
         default:
             break;
     }
+    free(url);
 }
 
 void upload_file_screen_render() {

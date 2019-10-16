@@ -13,6 +13,7 @@ struct stat stat_check;
 char *stat_path = NULL;
 int current_interface = 0;
 FileList *files;
+int files_size = 0;
 SDL_Event event;
 SDL_Surface *text = NULL;
 TTF_Font *font = NULL;
@@ -90,12 +91,24 @@ void reset_scroll_vars() {
         screen_scroll_upper = dir_amount + 1;
 }
 
-void render_text(char* msg, int x, int y) {
-    // set text position
-    text_pos.x = x;
-    text_pos.y = y;
+void reset_managed_screen_scroll_vars() {
+    cur_sel = 0;
+    screen_scroll_lower = 0;
+    screen_scroll_upper = SCREEN_SCROLL_SIZE - 2;
+}
+
+void render_text(char* msg) {
     // create text with the font and color
     text = TTF_RenderText_Solid(font, msg, text_color);
+    // blit the text to the screen
+    SDL_BlitSurface(text, NULL, screen, &text_pos);
+    // free the text to prevent memory leaks
+    SDL_FreeSurface(text);
+}
+
+void render_color_text(char* msg) {
+    // create text with the font and color
+    text = TTF_RenderText_Shaded(font, msg, sel_text_color_fg, sel_text_color_bg);
     // blit the text to the screen
     SDL_BlitSurface(text, NULL, screen, &text_pos);
     // free the text to prevent memory leaks
@@ -111,6 +124,8 @@ void main_screen_keyboard() {
             exit(0);
         case 'x':
             files = get_filelist();
+            files_size = get_filelist_size() - 1;
+            reset_managed_screen_scroll_vars();
             current_interface = MANAGED_FILE_SCREEN;
             break;
         case 'y':
@@ -126,10 +141,14 @@ void main_screen_keyboard() {
 }
 
 void main_screen_render() {
-    render_text("Git Save Manager", 0, 0);
-    render_text("Press Y (3DS) or Z (Desktop) to add files to be managed", 0, TEXT_HEIGHT * 2);
-    render_text("Press X to view managed files", 0, TEXT_HEIGHT * 3);
-    render_text("Press Select (3DS) or q (Desktop) to quit", 0, TEXT_HEIGHT * 4);
+    text_pos.y = 0;
+    render_text("Git Save Manager");
+    text_pos.y = TEXT_HEIGHT * 2;
+    render_text("Press Y (3DS) or Z (Desktop) to add files to be managed");
+    text_pos.y = TEXT_HEIGHT * 3;
+    render_text("Press X to view managed files");
+    text_pos.y = TEXT_HEIGHT * 4;
+    render_text("Press Select (3DS) or q (Desktop) to quit");
 }
 
 void managed_files_screen_keyboard() {
@@ -138,29 +157,51 @@ void managed_files_screen_keyboard() {
         case 's':
             current_interface = MAIN_SCREEN;
             break;
+        case SDLK_UP:
+            if(cur_sel > 0)
+                cur_sel--;
+            break;
+        case SDLK_DOWN:
+            if(cur_sel < files_size)
+                cur_sel++;
         default:
             break;
     }
 }
 
 void managed_files_screen_render() {
-    render_text("Managed Files", 0, 0);
+    text_pos.y = 0;
+    render_text("Managed Files");
 
     int i = TEXT_HEIGHT * 2;
+    text_pos.y = TEXT_HEIGHT * 2;
+
+    if(cur_sel >= screen_scroll_upper && cur_sel < files_size) {
+        screen_scroll_lower++;
+        screen_scroll_upper++;
+    } else if(cur_sel < screen_scroll_lower && cur_sel > -1) {
+        screen_scroll_lower--;
+        screen_scroll_upper--;
+    }
 
     if(files == NULL) {
-        render_text("No currently managed files", 0, i);
+        render_text("No currently managed files");
     } else {
         char* full_text = malloc(MAX_LINE_LENGTH);
         FileList *cur = files;
+        j = 0;
         while(cur != NULL) {
-            sprintf(full_text, "%s : %s", cur->name, cur->path);
-            render_text(full_text, 0, i);
+            if(j >= screen_scroll_lower && j <= screen_scroll_upper) {
+                sprintf(full_text, "%s : %s", cur->name, cur->path);
+                if(cur_sel == j) {
+                    render_color_text(full_text);
+                } else {
+                    render_text(full_text);
+                }
+                text_pos.y += TEXT_HEIGHT;
+            }
+            j++;
             cur = cur->next;
-            i += TEXT_HEIGHT;
-            // make sure to render on the screen
-            if(i / TEXT_HEIGHT > SCREEN_SCROLL_SIZE - 2)
-                break;
         }
         free(full_text);
     }
@@ -185,10 +226,14 @@ void selection_confirm_screen_keyboard() {
 }
 
 void selection_confirm_screen_render() {
-    render_text("Manage this file?", 0, 0);
-    render_text(namelist[cur_sel]->d_name, 0, TEXT_HEIGHT * 2);
-    render_text("Yes - Press A", 0, TEXT_HEIGHT * 4);
-    render_text("No - Press B", 0, TEXT_HEIGHT * 5);
+    text_pos.y = 0;
+    render_text("Manage this file?");
+    text_pos.y = TEXT_HEIGHT * 2;
+    render_text(namelist[cur_sel]->d_name);
+    text_pos.y = TEXT_HEIGHT * 4;
+    render_text("Yes - Press A");
+    text_pos.y = TEXT_HEIGHT * 5;
+    render_text("No - Press B");
 }
 
 void selection_screen_keyboard() {
@@ -249,7 +294,7 @@ void selection_screen_keyboard() {
 }
 
 void selection_screen_render() {
-    if(cur_sel >= screen_scroll_upper && cur_sel <= dir_amount) {
+    if(cur_sel >= screen_scroll_upper - 1 && cur_sel < dir_amount) {
         screen_scroll_lower++;
         screen_scroll_upper++;
     } else if(cur_sel < screen_scroll_lower && cur_sel > -1) {
@@ -260,19 +305,12 @@ void selection_screen_render() {
     if(namelist != NULL) {
         j = 0;
         for(i = screen_scroll_lower; i < screen_scroll_upper; i++) {
-            // update text pos
             text_pos.y = j * TEXT_HEIGHT;
             if(cur_sel == i) {
-                // create text with font and selected color
-                text = TTF_RenderText_Shaded(font, namelist[i]->d_name, sel_text_color_fg, sel_text_color_bg);
+                render_color_text(namelist[i]->d_name);
             } else {
-                // create text with the font and color
-                text = TTF_RenderText_Solid(font, namelist[i]->d_name, text_color);
+                render_text(namelist[i]->d_name);
             }
-            // blit the text to the screen
-            SDL_BlitSurface(text, NULL, screen, &text_pos);
-            // free the text to prevent memory leaks
-            SDL_FreeSurface(text);
             j++;
         }
     }

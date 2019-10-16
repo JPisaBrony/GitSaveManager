@@ -3,6 +3,7 @@
 char* username = NULL;
 char* password = NULL;
 FileList *filelist = NULL;
+int filelist_size = 0;
 
 char* get_username() {
     return username;
@@ -88,6 +89,7 @@ FileList* get_filelist_from_save_file() {
     char *line = malloc(MAX_LINE_LENGTH);
     char* name;
     char* path;
+    filelist_size = 0;
 
     file = fopen(SAVEFILES, "r");
 
@@ -104,6 +106,7 @@ FileList* get_filelist_from_save_file() {
         FileList *new_node = create_filelist_node(path, name);
         iter->next = new_node;
         iter = new_node;
+        filelist_size++;
     }
 
     // save first node
@@ -249,6 +252,10 @@ FileList* get_filelist() {
     // return the filelist if it exists
     // otherwise the filelist will be NULL
     return filelist;
+}
+
+int get_filelist_size() {
+    return filelist_size;
 }
 
 void free_creds() {

@@ -4,15 +4,16 @@ int i, j;
 int cur_sel = 0;
 int screen_scroll_lower = 0;
 int screen_scroll_upper = SCREEN_SCROLL_SIZE;
-char *selected_path;
-struct dirent **namelist;
-struct dirent **original_namelist;
+char *selected_path = NULL;
+struct dirent **namelist = NULL;
+struct dirent **original_namelist = NULL;
 int dir_amount = 0;
 int original_dir_amount = 0;
 struct stat stat_check;
 char *stat_path = NULL;
 int current_interface = 0;
-FileList *files;
+FileList *files = NULL;
+FileList *cur_file = NULL;
 int files_size = 0;
 SDL_Event event;
 SDL_Surface *text = NULL;
@@ -92,6 +93,8 @@ void reset_scroll_vars() {
 }
 
 void reset_managed_screen_scroll_vars() {
+    files = get_filelist();
+    files_size = get_filelist_size() - 1;
     cur_sel = 0;
     screen_scroll_lower = 0;
     screen_scroll_upper = SCREEN_SCROLL_SIZE - 2;
@@ -123,8 +126,6 @@ void main_screen_keyboard() {
             cleanup();
             exit(0);
         case 'x':
-            files = get_filelist();
-            files_size = get_filelist_size() - 1;
             reset_managed_screen_scroll_vars();
             current_interface = MANAGED_FILE_SCREEN;
             break;
@@ -151,11 +152,66 @@ void main_screen_render() {
     render_text("Press Select (3DS) or q (Desktop) to quit");
 }
 
+void find_current_file_node() {
+    i = 0;
+    FileList *cur = files;
+
+    while(cur != NULL) {
+        if(i == cur_sel) {
+            cur_file = cur;
+            break;
+        }
+        cur = cur->next;
+        i++;
+    }
+}
+
+void upload_file_screen_keyboard() {
+    switch(event.key.keysym.sym) {
+        case 'a':
+        case SDLK_RETURN:
+            break;
+        case 'b':
+        case 's':
+            current_interface = MANAGED_FILE_SCREEN;
+            break;
+        case 'y':
+        case 'q':
+            delete_node_from_filelist(&files, cur_sel);
+            write_save_file_from_filelist(files);
+            reset_managed_screen_scroll_vars();
+            current_interface = MANAGED_FILE_SCREEN;
+            break;
+        default:
+            break;
+    }
+}
+
+void upload_file_screen_render() {
+    text_pos.y = 0;
+    render_text("Upload File?");
+    text_pos.y = TEXT_HEIGHT * 2;
+    render_text(cur_file->name);
+    text_pos.y = TEXT_HEIGHT * 3;
+    render_text(cur_file->path);
+    text_pos.y = TEXT_HEIGHT * 5;
+    render_text("Yes - Press A");
+    text_pos.y = TEXT_HEIGHT * 6;
+    render_text("No - Press B");
+    text_pos.y = TEXT_HEIGHT * 7;
+    render_text("Delete - Press Y");
+}
+
 void managed_files_screen_keyboard() {
     switch(event.key.keysym.sym) {
         case 'b':
         case 's':
             current_interface = MAIN_SCREEN;
+            break;
+        case 'a':
+        case SDLK_RETURN:
+            find_current_file_node();
+            current_interface = UPLOAD_FILE_SCREEN;
             break;
         case SDLK_UP:
             if(cur_sel > 0)
@@ -397,6 +453,9 @@ void main_interface() {
                     case SELECTION_CONFIRM_SCREEN:
                         selection_confirm_screen_keyboard();
                         break;
+                    case UPLOAD_FILE_SCREEN:
+                        upload_file_screen_keyboard();
+                        break;
                 }
             }
         }
@@ -415,6 +474,9 @@ void main_interface() {
                 break;
             case SELECTION_CONFIRM_SCREEN:
                 selection_confirm_screen_render();
+                break;
+            case UPLOAD_FILE_SCREEN:
+                upload_file_screen_render();
                 break;
         }
 

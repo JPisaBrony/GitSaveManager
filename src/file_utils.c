@@ -138,6 +138,7 @@ void write_save_file_from_filelist(FileList *list) {
         strcpy(line, cur->name);
         strcat(line, " ");
         strcat(line, cur->path);
+        strcat(line, "\n");
         fputs(line, file);
         free(line);
         cur = cur->next;

@@ -4,6 +4,7 @@
 #define FONT_SIZE 16
 #define TEXT_HEIGHT 20
 #define SCREEN_SCROLL_SIZE 11
+#define HELD_DELAY 50
 
 #define MAIN_SCREEN 0
 #define MANAGED_FILE_SCREEN 1

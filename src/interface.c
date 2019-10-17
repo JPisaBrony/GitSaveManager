@@ -4,6 +4,7 @@ int i, j;
 int cur_sel = 0;
 int screen_scroll_lower = 0;
 int screen_scroll_upper = SCREEN_SCROLL_SIZE;
+int held_delay = -1;
 char *selected_path = NULL;
 struct dirent **namelist = NULL;
 struct dirent **original_namelist = NULL;
@@ -75,6 +76,30 @@ void scan_directory() {
 
     if(screen_scroll_upper > dir_amount)
         screen_scroll_upper = dir_amount + 1;
+}
+
+void screen_keyboard_held_up_or_down(int upper_limit) {
+    if(held_delay >= HELD_DELAY) {
+        held_delay = 0;
+    } else if(held_delay != -1) {
+        held_delay++;
+    }
+
+    const Uint8 *key_state = SDL_GetKeyState(NULL);
+
+    if(key_state[SDLK_UP] && cur_sel > 0) {
+        if(held_delay == -1)
+            held_delay = 0;
+        if(held_delay == 0)
+            cur_sel--;
+    } else if(key_state[SDLK_DOWN] && cur_sel < upper_limit) {
+        if(held_delay == -1)
+            held_delay = 0;
+        if(held_delay == 0)
+            cur_sel++;
+    } else {
+        held_delay = -1;
+    }
 }
 
 void reset_selected_path() {
@@ -210,6 +235,10 @@ void upload_file_screen_render() {
     render_text("Delete - Press Y");
 }
 
+void managed_files_screen_keyboard_held() {
+    screen_keyboard_held_up_or_down(files_size);
+}
+
 void managed_files_screen_keyboard() {
     switch(event.key.keysym.sym) {
         case 'b':
@@ -221,13 +250,6 @@ void managed_files_screen_keyboard() {
             find_current_file_node();
             current_interface = UPLOAD_FILE_SCREEN;
             break;
-        case SDLK_UP:
-            if(cur_sel > 0)
-                cur_sel--;
-            break;
-        case SDLK_DOWN:
-            if(cur_sel < files_size)
-                cur_sel++;
         default:
             break;
     }
@@ -300,6 +322,10 @@ void selection_confirm_screen_render() {
     render_text("No - Press B");
 }
 
+void selection_screen_keyboard_held() {
+    screen_keyboard_held_up_or_down(dir_amount);
+}
+
 void selection_screen_keyboard() {
     switch(event.key.keysym.sym) {
         case 'y':
@@ -343,14 +369,6 @@ void selection_screen_keyboard() {
                     current_interface = SELECTION_CONFIRM_SCREEN;
                 }
             }
-            break;
-        case SDLK_UP:
-            if(cur_sel > 0)
-                cur_sel--;
-            break;
-        case SDLK_DOWN:
-            if(cur_sel < dir_amount)
-                cur_sel++;
             break;
         default:
             break;
@@ -440,6 +458,16 @@ void interface_init() {
 
 void main_interface() {
     while(1) {
+        // check for keys that have repeated actions for being held
+        switch(current_interface) {
+            case MANAGED_FILE_SCREEN:
+                managed_files_screen_keyboard_held();
+                break;
+            case SELECTION_SCREEN:
+                selection_screen_keyboard_held();
+                break;
+        }
+
         // check for pending events
         while(SDL_PollEvent(&event)) {
             // quit was requested

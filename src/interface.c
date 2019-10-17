@@ -191,11 +191,10 @@ void find_current_file_node() {
     }
 }
 
-void upload_file_screen_keyboard() {
+void file_manage_screen_keyboard() {
     char *url = NULL;
     switch(event.key.keysym.sym) {
         case 'a':
-        case SDLK_RETURN:
             url = getUrlFromGistByFilename(cur_file->name);
             if(url == NULL)
                 createGist(cur_file->path, cur_file->name);
@@ -203,15 +202,19 @@ void upload_file_screen_keyboard() {
                 updateGist(cur_file->name, cur_file->path, url);
             current_interface = MANAGED_FILE_SCREEN;
             break;
-        case 'b':
-        case 's':
+        case 'y':
+            url = getUrlFromGistByFilename(cur_file->name);
+            if(url != NULL)
+                getAndSaveGist(cur_file->path, url);
             current_interface = MANAGED_FILE_SCREEN;
             break;
-        case 'y':
-        case 'q':
+        case 'x':
             delete_node_from_filelist(&files, cur_sel);
             write_save_file_from_filelist(files);
             reset_managed_screen_scroll_vars();
+            current_interface = MANAGED_FILE_SCREEN;
+            break;
+        case 'b':
             current_interface = MANAGED_FILE_SCREEN;
             break;
         default:
@@ -220,19 +223,21 @@ void upload_file_screen_keyboard() {
     free(url);
 }
 
-void upload_file_screen_render() {
+void file_manage_screen_render() {
     text_pos.y = 0;
-    render_text("Upload File?");
+    render_text("File Manage");
     text_pos.y = TEXT_HEIGHT * 2;
     render_text(cur_file->name);
     text_pos.y = TEXT_HEIGHT * 3;
     render_text(cur_file->path);
     text_pos.y = TEXT_HEIGHT * 5;
-    render_text("Yes - Press A");
+    render_text("Upload - Press A");
     text_pos.y = TEXT_HEIGHT * 6;
-    render_text("No - Press B");
+    render_text("Download - Press Y");
     text_pos.y = TEXT_HEIGHT * 7;
-    render_text("Delete - Press Y");
+    render_text("Delete - Press X");
+    text_pos.y = TEXT_HEIGHT * 8;
+    render_text("Cancel - Press B");
 }
 
 void managed_files_screen_keyboard_held() {
@@ -248,7 +253,7 @@ void managed_files_screen_keyboard() {
         case 'a':
         case SDLK_RETURN:
             find_current_file_node();
-            current_interface = UPLOAD_FILE_SCREEN;
+            current_interface = FILE_MANAGE_SCREEN;
             break;
         default:
             break;
@@ -489,8 +494,8 @@ void main_interface() {
                     case SELECTION_CONFIRM_SCREEN:
                         selection_confirm_screen_keyboard();
                         break;
-                    case UPLOAD_FILE_SCREEN:
-                        upload_file_screen_keyboard();
+                    case FILE_MANAGE_SCREEN:
+                        file_manage_screen_keyboard();
                         break;
                 }
             }
@@ -511,8 +516,8 @@ void main_interface() {
             case SELECTION_CONFIRM_SCREEN:
                 selection_confirm_screen_render();
                 break;
-            case UPLOAD_FILE_SCREEN:
-                upload_file_screen_render();
+            case FILE_MANAGE_SCREEN:
+                file_manage_screen_render();
                 break;
         }
 

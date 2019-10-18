@@ -1,17 +1,7 @@
 #include "global.h"
 
-char* username = NULL;
-char* password = NULL;
 FileList *filelist = NULL;
 int filelist_size = 0;
-
-char* get_username() {
-    return username;
-}
-
-char* get_password() {
-    return password;
-}
 
 void hex_to_binary(char *buffer, int binarySize) {
     int i;

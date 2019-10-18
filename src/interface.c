@@ -23,7 +23,6 @@ SDL_Color text_color;
 SDL_Color sel_text_color_fg;
 SDL_Color sel_text_color_bg;
 SDL_Rect text_pos;
-SDL_Surface *screen = NULL;
 
 void free_namelist() {
     if(original_namelist != NULL) {

@@ -28,6 +28,11 @@
 
 #define BPP 8
 
+// global variables
+SDL_Surface *screen;
+char* username;
+char* password;
+
 // global functions
 void exit_msg(char* msg);
 

@@ -47,8 +47,8 @@ void createGist(char* path, char* filename) {
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_object_to_json_string(json));
         curl_easy_setopt(curl, CURLOPT_USERAGENT, USERAGENT);
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-        curl_easy_setopt(curl, CURLOPT_USERNAME, get_username());
-        curl_easy_setopt(curl, CURLOPT_PASSWORD, get_password());
+        curl_easy_setopt(curl, CURLOPT_USERNAME, username);
+        curl_easy_setopt(curl, CURLOPT_PASSWORD, password);
 
         CURLcode res = curl_easy_perform(curl);
 
@@ -128,8 +128,8 @@ char* getUrlFromGistByFilename(char *filename) {
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &curl_ret);
         curl_easy_setopt(curl, CURLOPT_USERAGENT, USERAGENT);
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-        curl_easy_setopt(curl, CURLOPT_USERNAME, get_username());
-        curl_easy_setopt(curl, CURLOPT_PASSWORD, get_password());
+        curl_easy_setopt(curl, CURLOPT_USERNAME, username);
+        curl_easy_setopt(curl, CURLOPT_PASSWORD, password);
 
         CURLcode res = curl_easy_perform(curl);
 
@@ -192,8 +192,8 @@ void updateGist(char* filename, char* path, char* url) {
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_object_to_json_string(json));
         curl_easy_setopt(curl, CURLOPT_USERAGENT, USERAGENT);
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-        curl_easy_setopt(curl, CURLOPT_USERNAME, get_username());
-        curl_easy_setopt(curl, CURLOPT_PASSWORD, get_password());
+        curl_easy_setopt(curl, CURLOPT_USERNAME, username);
+        curl_easy_setopt(curl, CURLOPT_PASSWORD, password);
 
         CURLcode res = curl_easy_perform(curl);
 

@@ -54,6 +54,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="src/interface.h" />
+		<Unit filename="src/interface_keyboard.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/interface_keyboard.h" />
 		<Unit filename="src/main.c">
 			<Option compilerVar="CC" />
 		</Unit>

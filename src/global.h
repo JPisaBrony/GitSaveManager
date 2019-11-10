@@ -19,7 +19,7 @@
 
 #define SCREEN_WIDTH 400
 #define SCREEN_HEIGHT 240
-#define SDL_FLAGS SDL_FULLSCREEN
+#define SDL_FLAGS SDL_DUALSCR
 #else
 #define SCREEN_WIDTH 1024
 #define SCREEN_HEIGHT 768
@@ -30,6 +30,7 @@
 
 // global variables
 SDL_Surface *screen;
+TTF_Font *font;
 char* username;
 char* password;
 
@@ -40,5 +41,6 @@ void exit_msg(char* msg);
 #include "interface.h"
 #include "file_utils.h"
 #include "curl_utils.h"
+#include "interface_keyboard.h"
 
 #endif

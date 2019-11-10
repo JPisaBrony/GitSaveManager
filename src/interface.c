@@ -18,7 +18,6 @@ FileList *cur_file = NULL;
 int files_size = 0;
 SDL_Event event;
 SDL_Surface *text = NULL;
-TTF_Font *font = NULL;
 SDL_Color text_color;
 SDL_Color sel_text_color_fg;
 SDL_Color sel_text_color_bg;

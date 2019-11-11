@@ -240,4 +240,57 @@ void show_keyboard() {
     rect.y = KEYBOARD_START_Y + (4 * KEYBOARD_Y_INCREMENT) + KEYBOARD_KEY_SPACING;
     rect.x = KEYBOARD_START_X + KEYBOARD_KEY_SPACING * 7;
     special_key_button("         ", SPECIAL_KEY_ACTION_SPACE);
+
+    //debug_dual_screen();
+    draw_bottom_screen_bounds();
+}
+
+void draw_bottom_screen_bounds() {
+    #define TOP_SCREEN_WIDTH 400
+    #define TOP_SCREEN_HEIGHT 240
+    #define BOTTOM_SCREEN_OFFSET 40
+    #define BOTTOM_SCREEN_HEIGHT 240
+
+    SDL_Rect bounds;
+    bounds.x = 0;
+    bounds.y = TOP_SCREEN_HEIGHT;
+    bounds.w = BOTTOM_SCREEN_OFFSET;
+    bounds.h = BOTTOM_SCREEN_HEIGHT;
+    SDL_FillRect(screen, &bounds, 0xFFFFFFFF);
+
+    bounds.x = TOP_SCREEN_WIDTH - BOTTOM_SCREEN_OFFSET;
+    bounds.y = TOP_SCREEN_HEIGHT;
+    bounds.w = BOTTOM_SCREEN_OFFSET;
+    bounds.h = BOTTOM_SCREEN_HEIGHT;
+    SDL_FillRect(screen, &bounds, 0xFFFFFFFF);
+}
+
+void debug_dual_screen() {
+    #define TOP_SCREEN_WIDTH 400
+    #define TOP_SCREEN_HEIGHT 240
+    #define BOX_SIZE 10
+
+    SDL_Rect bounds;
+    bounds.x = 0;
+    bounds.y = 0;
+    bounds.w = BOX_SIZE;
+    bounds.h = BOX_SIZE;
+
+    SDL_FillRect(screen, &bounds, 0xFFFFFFFF);
+
+    bounds.x = TOP_SCREEN_WIDTH - BOX_SIZE;
+    bounds.y = TOP_SCREEN_HEIGHT - BOX_SIZE;
+    SDL_FillRect(screen, &bounds, 0xFFFFFFFF);
+
+    #define BOTTOM_SCREEN_OFFSET 40
+    #define BOTTOM_SCREEN_WIDTH 320
+    #define BOTTOM_SCREEN_HEIGHT 240
+
+    bounds.x = BOTTOM_SCREEN_OFFSET;
+    bounds.y = TOP_SCREEN_HEIGHT;
+    SDL_FillRect(screen, &bounds, 0xFFFFFFFF);
+
+    bounds.x = BOTTOM_SCREEN_OFFSET + BOTTOM_SCREEN_WIDTH - BOX_SIZE;
+    bounds.y = TOP_SCREEN_HEIGHT + BOTTOM_SCREEN_HEIGHT - BOX_SIZE;
+    SDL_FillRect(screen, &bounds, 0xFFFFFFFF);
 }

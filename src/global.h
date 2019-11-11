@@ -17,15 +17,13 @@
 #define SOC_ALIGN       0x1000
 #define SOC_BUFFERSIZE  0x100000
 
-#define SCREEN_WIDTH 400
-#define SCREEN_HEIGHT 240
 #define SDL_FLAGS SDL_DUALSCR
 #else
-#define SCREEN_WIDTH 1024
-#define SCREEN_HEIGHT 768
 #define SDL_FLAGS SDL_SWSURFACE
 #endif
 
+#define SCREEN_WIDTH 400
+#define SCREEN_HEIGHT 480
 #define BPP 8
 
 // global variables

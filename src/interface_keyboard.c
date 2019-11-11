@@ -17,17 +17,17 @@ char *input;
 char **keys;
 
 char *keys_lower[KEYS_ROWS] =
-{"1234567890",
- "qwertyuiop",
- "asdfghjkl",
- "zxcvbnm"
+{"1234567890-=",
+ "qwertyuiop[]\\",
+ "asdfghjkl;\'",
+ "zxcvbnm,./"
 };
 
 char *keys_upper[KEYS_ROWS] =
-{"!@#$%^&*()",
- "QWERTYUIOP",
- "ASDFGHJKL",
- "ZXCVBNM"
+{"!@#$%^&*()_+",
+ "QWERTYUIOP{}|",
+ "ASDFGHJKL:\"",
+ "ZXCVBNM<>?"
 };
 
 void switch_letter_case() {
@@ -78,38 +78,50 @@ void special_key_button(char *msg, int action) {
     SDL_Surface *text = TTF_RenderText_Solid(font, msg, text_color_fg);
 
     // background rectangle bounds
-    int len = strlen(msg) - 1;
+    int len = 0;
+    if(strlen(msg) > 1)
+        len = strlen(msg) - 1;
+    else
+        len = 1;
+
     rect.x = rect.x - KEYBOARD_KEY_BACKGROUND_SPACE;
     rect.w = len * (KEYBOARD_X_INCREMENT - KEYBOARD_KEY_BACKGROUND_SPACE);
 
     // check if mouse is inside the rectangle
     if(mouse_x > rect.x && mouse_x < rect.x + rect.w && mouse_y > rect.y && mouse_y < rect.y + rect.h && mouse_pressed == 1) {
         SDL_FillRect(screen, &rect, text_color_bg_pressed);
-        switch(action) {
-            case SPECIAL_KEY_ACTION_BACKSPACE:
-                if(mouse_just_pressed == 1) {
+        if(mouse_just_pressed == 1) {
+            switch(action) {
+                case SPECIAL_KEY_ACTION_BACKSPACE:
                     len = strlen(input);
                     input[len - 1] = '\0';
-                    mouse_just_pressed = 0;
-                }
-                break;
-            case SPECIAL_KEY_ACTION_ENTER:
-                break;
-            case SPECIAL_KEY_ACTION_CAPS:
-                if(mouse_just_pressed == 1) {
+                    break;
+                case SPECIAL_KEY_ACTION_ENTER:
+                    break;
+                case SPECIAL_KEY_ACTION_CAPS:
                     switch_letter_case();
-                    mouse_just_pressed = 0;
-                }
-                break;
-            case SPECIAL_KEY_ACTION_SHIFT:
-                if(mouse_just_pressed == 1) {
+                    break;
+                case SPECIAL_KEY_ACTION_SHIFT:
                     switch_letter_case();
-                    mouse_just_pressed = 0;
                     shift_pressed = !shift_pressed;
-                }
-                break;
-            default:
-                break;
+                    break;
+                case SPECIAL_KEY_ACTION_SPACE:
+                    strcat(input, " ");
+                    break;
+                case SPECIAL_KEY_ACTION_BACKQUOTE:
+                    strcat(input, "`");
+                    break;
+                case SPECIAL_KEY_ACTION_TILDE:
+                    if(shift_pressed == 1) {
+                        switch_letter_case();
+                        shift_pressed = 0;
+                    }
+                    strcat(input, "~");
+                    break;
+                default:
+                    break;
+            }
+            mouse_just_pressed = 0;
         }
     } else {
         // render background rectangle
@@ -189,20 +201,43 @@ void show_keyboard() {
     for(i = 0; i < KEYS_ROWS; i++) {
         rect.y = KEYBOARD_START_Y + (i * KEYBOARD_Y_INCREMENT) + KEYBOARD_KEY_SPACING;
         int len = strlen(keys[i]);
-        rect.x = KEYBOARD_START_X - KEYBOARD_KEY_BACKGROUND_SPACE;
 
-        if(i == 3)
+        // back quote and tilde keys special case
+        if(i == 0) {
+            rect.x = KEYBOARD_START_X - KEYBOARD_KEY_SPACING - KEYBOARD_KEY_BACKGROUND_SPACE;
+            if(key_state == KEYS_LOWER)
+                special_key_button("`", SPECIAL_KEY_ACTION_BACKQUOTE);
+            else if(key_state == KEYS_UPPER)
+                special_key_button("~", SPECIAL_KEY_ACTION_TILDE);
+        }
+
+        if(i == 2) {
+            rect.x = KEYBOARD_START_X - KEYBOARD_KEY_SPACING - KEYBOARD_KEY_BACKGROUND_SPACE;
+            special_key_button("[c]", SPECIAL_KEY_ACTION_CAPS);
+        }
+
+        if(i == 3) {
+            rect.x = KEYBOARD_START_X - KEYBOARD_KEY_BACKGROUND_SPACE;
             special_key_button("[s]", SPECIAL_KEY_ACTION_SHIFT);
+        }
 
         for(j = 0; j < len; j++) {
             rect.x = KEYBOARD_START_X + (j * KEYBOARD_X_INCREMENT) + KEYBOARD_KEY_SPACING + i * KEYBOARD_KEY_SPACING;
             key_button(keys[i][j]);
         }
 
-        if(i == 1)
+        if(i == 0) {
+            rect.x += KEYBOARD_KEY_SPACING * 2 + KEYBOARD_KEY_BACKGROUND_SPACE;
             special_key_button("<==", SPECIAL_KEY_ACTION_BACKSPACE);
+        }
 
-        if(i == 2)
+        if(i == 2) {
+            rect.x += KEYBOARD_KEY_SPACING * 2 + KEYBOARD_KEY_BACKGROUND_SPACE;
             special_key_button("==>", SPECIAL_KEY_ACTION_ENTER);
+        }
     }
+
+    rect.y = KEYBOARD_START_Y + (4 * KEYBOARD_Y_INCREMENT) + KEYBOARD_KEY_SPACING;
+    rect.x = KEYBOARD_START_X + KEYBOARD_KEY_SPACING * 7;
+    special_key_button("         ", SPECIAL_KEY_ACTION_SPACE);
 }

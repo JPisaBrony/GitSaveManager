@@ -17,17 +17,24 @@ char *input;
 char **keys;
 
 char *keys_lower[KEYS_ROWS] =
-{"1234567890-=",
- "qwertyuiop[]\\",
- "asdfghjkl;\'",
- "zxcvbnm,./"
+{"1234567890",
+ "qwertyuiop",
+ "asdfghjkl",
+ "zxcvbnm"
 };
 
 char *keys_upper[KEYS_ROWS] =
-{"!@#$%^&*()_+",
- "QWERTYUIOP{}|",
- "ASDFGHJKL:\"",
- "ZXCVBNM<>?"
+{"!@#$%^&*()",
+ "QWERTYUIOP",
+ "ASDFGHJKL",
+ "ZXCVBNM"
+};
+
+char *keys_extra[KEYS_ROWS] =
+{"-=_+      ",
+ "[]\{}|     ",
+ ";\':\"     ",
+ ",./<>? "
 };
 
 void switch_letter_case() {
@@ -99,11 +106,15 @@ void special_key_button(char *msg, int action) {
                 case SPECIAL_KEY_ACTION_ENTER:
                     break;
                 case SPECIAL_KEY_ACTION_CAPS:
-                    switch_letter_case();
+                    if(key_state != KEYS_EXTRA) {
+                        switch_letter_case();
+                    }
                     break;
                 case SPECIAL_KEY_ACTION_SHIFT:
-                    switch_letter_case();
-                    shift_pressed = !shift_pressed;
+                    if(key_state != KEYS_EXTRA) {
+                        switch_letter_case();
+                        shift_pressed = !shift_pressed;
+                    }
                     break;
                 case SPECIAL_KEY_ACTION_SPACE:
                     strcat(input, " ");
@@ -117,6 +128,19 @@ void special_key_button(char *msg, int action) {
                         shift_pressed = 0;
                     }
                     strcat(input, "~");
+                    break;
+                case SPECIAL_KEY_ACTION_EXTRA:
+                    if(key_state != KEYS_EXTRA) {
+                        keys = keys_extra;
+                        key_state = KEYS_EXTRA;
+                        shift_pressed = 0;
+                    } else {
+                        keys = keys_lower;
+                        key_state = KEYS_LOWER;
+                    }
+                    break;
+                case SPECIAL_KEY_ACTION_CLEAR:
+                    input[0] = '\0';
                     break;
                 default:
                     break;
@@ -207,7 +231,7 @@ void show_keyboard() {
             rect.x = KEYBOARD_START_X - KEYBOARD_KEY_SPACING - KEYBOARD_KEY_BACKGROUND_SPACE;
             if(key_state == KEYS_LOWER)
                 special_key_button("`", SPECIAL_KEY_ACTION_BACKQUOTE);
-            else if(key_state == KEYS_UPPER)
+            else if(key_state == KEYS_UPPER || key_state == KEYS_EXTRA)
                 special_key_button("~", SPECIAL_KEY_ACTION_TILDE);
         }
 
@@ -235,11 +259,19 @@ void show_keyboard() {
             rect.x += KEYBOARD_KEY_SPACING * 2 + KEYBOARD_KEY_BACKGROUND_SPACE;
             special_key_button("==>", SPECIAL_KEY_ACTION_ENTER);
         }
+
+        if(i == 3) {
+            rect.x += KEYBOARD_KEY_SPACING * 2 + KEYBOARD_KEY_BACKGROUND_SPACE;
+            special_key_button("[e]", SPECIAL_KEY_ACTION_EXTRA);
+        }
     }
 
     rect.y = KEYBOARD_START_Y + (4 * KEYBOARD_Y_INCREMENT) + KEYBOARD_KEY_SPACING;
-    rect.x = KEYBOARD_START_X + KEYBOARD_KEY_SPACING * 7;
-    special_key_button("         ", SPECIAL_KEY_ACTION_SPACE);
+    rect.x = KEYBOARD_START_X + KEYBOARD_KEY_SPACING * 5;
+    special_key_button("        ", SPECIAL_KEY_ACTION_SPACE);
+
+    rect.x = KEYBOARD_START_X + KEYBOARD_KEY_SPACING * 19 + KEYBOARD_KEY_BACKGROUND_SPACE;
+    special_key_button("cls", SPECIAL_KEY_ACTION_CLEAR);
 
     //debug_dual_screen();
     draw_bottom_screen_bounds();

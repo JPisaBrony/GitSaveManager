@@ -145,7 +145,6 @@ void main_screen_keyboard() {
     switch(event.key.keysym.sym) {
         // quit
         case SDLK_ESCAPE:
-        case 'q':
             cleanup();
             exit(0);
         case 'x':
@@ -153,7 +152,6 @@ void main_screen_keyboard() {
             current_interface = MANAGED_FILE_SCREEN;
             break;
         case 'y':
-        case 'z':
             current_interface = SELECTION_SCREEN;
             reset_selected_path();
             scan_directory();
@@ -168,11 +166,11 @@ void main_screen_render() {
     text_pos.y = 0;
     render_text("Git Save Manager");
     text_pos.y = TEXT_HEIGHT * 2;
-    render_text("Press Y (3DS) or Z (Desktop) to add files to be managed");
+    render_text("Press Y to add files to be managed");
     text_pos.y = TEXT_HEIGHT * 3;
     render_text("Press X to view managed files");
     text_pos.y = TEXT_HEIGHT * 4;
-    render_text("Press Select (3DS) or q (Desktop) to quit");
+    render_text("Press Select to quit");
 }
 
 void find_current_file_node() {
@@ -245,7 +243,6 @@ void managed_files_screen_keyboard_held() {
 void managed_files_screen_keyboard() {
     switch(event.key.keysym.sym) {
         case 'b':
-        case 's':
             current_interface = MAIN_SCREEN;
             break;
         case 'a':
@@ -300,7 +297,6 @@ void selection_confirm_screen_keyboard() {
     FileList *node;
     switch(event.key.keysym.sym) {
         case 'b':
-        case 's':
             current_interface = SELECTION_SCREEN;
             break;
         case 'a':
@@ -331,8 +327,7 @@ void selection_screen_keyboard_held() {
 
 void selection_screen_keyboard() {
     switch(event.key.keysym.sym) {
-        case 'y':
-        case 'q':
+        case SDLK_ESCAPE:
             current_interface = MAIN_SCREEN;
             break;
         case 'b':

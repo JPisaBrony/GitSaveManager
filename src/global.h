@@ -31,6 +31,10 @@ SDL_Surface *screen;
 TTF_Font *font;
 char* username;
 char* password;
+int mouse_x;
+int mouse_y;
+int mouse_pressed;
+int mouse_just_pressed;
 
 // global functions
 void exit_msg(char* msg);

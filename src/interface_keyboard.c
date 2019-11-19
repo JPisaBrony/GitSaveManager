@@ -1,12 +1,7 @@
 #include "global.h"
 
 int i, j;
-int mouse_x = 0;
-int mouse_y = 0;
-int mouse_pressed = 0;
-int mouse_just_pressed = 0;
 SDL_Rect rect;
-SDL_Event e;
 SDL_Color text_color_fg;
 Uint32 text_color_bg = 0;
 Uint32 text_color_bg_pressed = 0;
@@ -175,39 +170,9 @@ void keyboard_init() {
     // setup keys
     keys = keys_lower;
 
-    // testing
-    while(1) {
-        // check for pending events
-        while(SDL_PollEvent(&e)) {
-            // quit was requested
-            if(e.type == SDL_QUIT) {
-                exit(0);
-            } else if (e.type == SDL_KEYDOWN) {
-                switch(e.key.keysym.sym) {
-                    case 'q':
-                        SDL_Quit();
-                        exit(0);
-                        break;
-                    default:
-                        break;
-                }
-            } else if(e.type == SDL_MOUSEBUTTONDOWN) {
-                mouse_pressed = 1;
-                mouse_just_pressed = 1;
-                SDL_GetMouseState(&mouse_x, &mouse_y);
-            } else if(e.type == SDL_MOUSEBUTTONUP) {
-                mouse_pressed = 0;
-            }
-        }
-
-        // clear screen
-        SDL_FillRect(screen, NULL, 0x00000000);
-
-        show_keyboard();
-
-        if(SDL_Flip(screen) == -1)
-            exit_msg("Failed to SDL_Flip");
-    }
+    // set vars to initial value
+    mouse_pressed = 0;
+    mouse_just_pressed = 0;
 }
 
 void show_keyboard() {
@@ -272,9 +237,6 @@ void show_keyboard() {
 
     rect.x = KEYBOARD_START_X + KEYBOARD_KEY_SPACING * 19 + KEYBOARD_KEY_BACKGROUND_SPACE;
     special_key_button("cls", SPECIAL_KEY_ACTION_CLEAR);
-
-    //debug_dual_screen();
-    draw_bottom_screen_bounds();
 }
 
 void draw_bottom_screen_bounds() {

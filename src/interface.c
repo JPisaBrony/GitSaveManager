@@ -262,7 +262,7 @@ void managed_files_screen_render() {
     text_pos.y = 0;
     render_text("Managed Files");
 
-    int i = TEXT_HEIGHT * 2;
+    i = TEXT_HEIGHT * 2;
     text_pos.y = TEXT_HEIGHT * 2;
 
     if(cur_sel >= screen_scroll_upper && cur_sel < files_size) {
@@ -496,8 +496,15 @@ void main_interface() {
                         file_manage_screen_keyboard();
                         break;
                 }
+            } else if(event.type == SDL_MOUSEBUTTONDOWN) {
+                mouse_pressed = 1;
+                mouse_just_pressed = 1;
+                SDL_GetMouseState(&mouse_x, &mouse_y);
+            } else if(event.type == SDL_MOUSEBUTTONUP) {
+                mouse_pressed = 0;
             }
         }
+
         // clear screen
         SDL_FillRect(screen, NULL, 0x00000000);
 

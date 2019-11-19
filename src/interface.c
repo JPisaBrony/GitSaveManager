@@ -6,6 +6,7 @@ int screen_scroll_lower = 0;
 int screen_scroll_upper = SCREEN_SCROLL_SIZE;
 int held_delay = -1;
 char *selected_path = NULL;
+char *current_name = NULL;
 struct dirent **namelist = NULL;
 struct dirent **original_namelist = NULL;
 int dir_amount = 0;
@@ -295,15 +296,25 @@ void managed_files_screen_render() {
 
 void selection_confirm_screen_keyboard() {
     FileList *node;
+    char *full_path;
     switch(event.key.keysym.sym) {
         case 'b':
+            free(current_name);
             current_interface = SELECTION_SCREEN;
             break;
         case 'a':
-            node = create_filelist_node(selected_path, namelist[cur_sel]->d_name);
+            full_path = malloc((strlen(selected_path) * sizeof(char*)) + (strlen(namelist[cur_sel]->d_name) * sizeof(char*)));
+            strcpy(full_path, selected_path);
+            strcat(full_path, namelist[cur_sel]->d_name);
+            node = create_filelist_node(full_path, current_name);
             append_node_to_save_file(node);
             free_filelist_node(node);
+            free(current_name);
+            free(full_path);
             current_interface = MAIN_SCREEN;
+            break;
+        case 'y':
+            current_interface = SELECTION_RENAME_SCREEN;
             break;
         default:
             break;
@@ -314,15 +325,35 @@ void selection_confirm_screen_render() {
     text_pos.y = 0;
     render_text("Manage this file?");
     text_pos.y = TEXT_HEIGHT * 2;
-    render_text(namelist[cur_sel]->d_name);
+    render_text(current_name);
     text_pos.y = TEXT_HEIGHT * 4;
     render_text("Yes - Press A");
     text_pos.y = TEXT_HEIGHT * 5;
     render_text("No - Press B");
+    text_pos.y = TEXT_HEIGHT * 6;
+    render_text("Rename - Press Y");
 }
 
 void selection_screen_keyboard_held() {
     screen_keyboard_held_up_or_down(dir_amount);
+}
+
+void selection_rename_screen_keyboard() {
+    switch(event.key.keysym.sym) {
+        case 'b':
+            current_interface = SELECTION_CONFIRM_SCREEN;
+            break;
+        default:
+            break;
+    }
+}
+
+void selection_rename_screen_render() {
+    text_pos.y = 0;
+    render_text("Rename file");
+    text_pos.y = TEXT_HEIGHT * 4;
+    render_text("Done - Press B");
+    show_keyboard(current_name, 0, TEXT_HEIGHT * 2);
 }
 
 void selection_screen_keyboard() {
@@ -364,6 +395,8 @@ void selection_screen_keyboard() {
                     scan_directory();
                     reset_scroll_vars();
                 } else {
+                    current_name = malloc(strlen(namelist[cur_sel]->d_name) * sizeof(char*));
+                    strcpy(current_name, namelist[cur_sel]->d_name);
                     current_interface = SELECTION_CONFIRM_SCREEN;
                 }
             }
@@ -487,6 +520,9 @@ void main_interface() {
                     case SELECTION_CONFIRM_SCREEN:
                         selection_confirm_screen_keyboard();
                         break;
+                    case SELECTION_RENAME_SCREEN:
+                        selection_rename_screen_keyboard();
+                        break;
                     case FILE_MANAGE_SCREEN:
                         file_manage_screen_keyboard();
                         break;
@@ -515,6 +551,9 @@ void main_interface() {
                 break;
             case SELECTION_CONFIRM_SCREEN:
                 selection_confirm_screen_render();
+                break;
+            case SELECTION_RENAME_SCREEN:
+                selection_rename_screen_render();
                 break;
             case FILE_MANAGE_SCREEN:
                 file_manage_screen_render();

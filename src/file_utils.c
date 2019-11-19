@@ -153,7 +153,6 @@ void append_node_to_save_file(FileList *node) {
     strcpy(line, node->name);
     strcat(line, " ");
     strcat(line, node->path);
-    strcat(line, node->name);
     strcat(line, "\n");
     fputs(line, file);
     free(line);

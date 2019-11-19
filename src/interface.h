@@ -10,7 +10,8 @@
 #define MANAGED_FILE_SCREEN 1
 #define SELECTION_SCREEN 2
 #define SELECTION_CONFIRM_SCREEN 3
-#define FILE_MANAGE_SCREEN 4
+#define SELECTION_RENAME_SCREEN 4
+#define FILE_MANAGE_SCREEN 5
 
 void interface_init();
 void main_interface();

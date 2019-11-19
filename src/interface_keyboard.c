@@ -163,10 +163,6 @@ void keyboard_init() {
     text_color_bg = SDL_MapRGB(screen->format, 0x00, 0x37, 0xFF);
     text_color_bg_pressed = SDL_MapRGB(screen->format, 0x03, 0xF8, 0xFC);
 
-    // setup input
-    input = malloc(MAX_INPUT_LENGTH);
-    input[0] = '\0';
-
     // setup keys
     keys = keys_lower;
 
@@ -175,10 +171,12 @@ void keyboard_init() {
     mouse_just_pressed = 0;
 }
 
-void show_keyboard() {
-    // print input to top of screen
-    rect.x = 0;
-    rect.y = 0;
+void show_keyboard(char* input_ptr, int input_x, int input_y) {
+    // set input to use the passed in input string
+    input = input_ptr;
+    // print input at specified location
+    rect.x = input_x;
+    rect.y = input_y;
     // create text with the font and color
     SDL_Surface *text = TTF_RenderText_Solid(font, input, text_color_fg);
     // blit the text to the screen

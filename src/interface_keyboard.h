@@ -25,6 +25,8 @@
 #define KEYS_EXTRA 2
 
 void keyboard_init();
-void show_keyboard(char* input_ptr, int input_x, int intput_y);
+void show_keyboard(int input_x, int input_y);
+void keyboard_setup(char* input_ptr, void (*enter_func_ptr)());
+void keyboard_clear_enter_func();
 
 #endif

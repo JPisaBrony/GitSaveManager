@@ -35,6 +35,7 @@ int mouse_x;
 int mouse_y;
 int mouse_pressed;
 int mouse_just_pressed;
+int local_creds_status;
 
 // global functions
 void exit_msg(char* msg);

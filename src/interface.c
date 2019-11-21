@@ -23,6 +23,7 @@ SDL_Color text_color;
 SDL_Color sel_text_color_fg;
 SDL_Color sel_text_color_bg;
 SDL_Rect text_pos;
+int github_input_location = 0;
 
 void free_namelist() {
     if(original_namelist != NULL) {
@@ -142,6 +143,36 @@ void render_color_text(char* msg) {
     SDL_FreeSurface(text);
 }
 
+void github_creds_password_enter_func() {
+    if(strcmp("password", "") != 0) {
+        write_local_creds();
+        keyboard_clear_enter_func();
+        current_interface = MAIN_SCREEN;
+    }
+}
+
+void github_creds_username_enter_func() {
+    if(strcmp("username", "") != 0) {
+        github_input_location = TEXT_HEIGHT * 6;
+        keyboard_clear_enter_func();
+        keyboard_setup(password, &github_creds_password_enter_func);
+    }
+}
+
+void github_setup_screen() {
+    if(username == NULL) {
+        username = malloc(MAX_INPUT_LENGTH);
+        username[0] = '\0';
+    }
+    if(password == NULL) {
+        password = malloc(MAX_INPUT_LENGTH);
+        password[0] = '\0';
+    }
+    github_input_location = TEXT_HEIGHT * 3;
+    keyboard_setup(username, &github_creds_username_enter_func);
+    current_interface = GITHUB_CREDS_SCREEN;
+}
+
 void main_screen_keyboard() {
     switch(event.key.keysym.sym) {
         // quit
@@ -158,6 +189,13 @@ void main_screen_keyboard() {
             scan_directory();
             reset_scroll_vars();
             break;
+        case SDLK_RETURN:
+            if(local_creds_status == 0) {
+                current_interface = GITHUB_RESET_CREDS_SCREEN;
+            } else {
+                github_setup_screen();
+            }
+            break;
         default:
             break;
     }
@@ -171,6 +209,8 @@ void main_screen_render() {
     text_pos.y = TEXT_HEIGHT * 3;
     render_text("Press X to view managed files");
     text_pos.y = TEXT_HEIGHT * 4;
+    render_text("Press Start to login to Github");
+    text_pos.y = TEXT_HEIGHT * 5;
     render_text("Press Select to quit");
 }
 
@@ -193,17 +233,39 @@ void file_manage_screen_keyboard() {
     switch(event.key.keysym.sym) {
         case 'a':
             url = getUrlFromGistByFilename(cur_file->name);
-            if(url == NULL)
-                createGist(cur_file->path, cur_file->name);
-            else
-                updateGist(cur_file->name, cur_file->path, url);
-            current_interface = MANAGED_FILE_SCREEN;
+            if(url == NULL) {
+                if(createGist(cur_file->path, cur_file->name) == -1) {
+                    current_interface = INVALID_CREDS_SCREEN;
+                } else {
+                    current_interface = MANAGED_FILE_SCREEN;
+                }
+            } else if(url[0] == 'e') {
+                current_interface = INVALID_CREDS_SCREEN;
+            } else {
+                if(updateGist(cur_file->name, cur_file->path, url) == -1) {
+                    current_interface = INVALID_CREDS_SCREEN;
+                } else {
+                    current_interface = MANAGED_FILE_SCREEN;
+                }
+                free(url);
+            }
             break;
         case 'y':
             url = getUrlFromGistByFilename(cur_file->name);
-            if(url != NULL)
-                getAndSaveGist(cur_file->path, url);
-            current_interface = MANAGED_FILE_SCREEN;
+            if(url != NULL) {
+                if(url[0] == 'e') {
+                    current_interface = INVALID_CREDS_SCREEN;
+                } else {
+                    if(getAndSaveGist(cur_file->path, url) == -1) {
+                        current_interface = INVALID_CREDS_SCREEN;
+                    } else {
+                        current_interface = MANAGED_FILE_SCREEN;
+                    }
+                    free(url);
+                }
+            } else {
+                current_interface = MANAGED_FILE_SCREEN;
+            }
             break;
         case 'x':
             delete_node_from_filelist(&files, cur_sel);
@@ -217,7 +279,6 @@ void file_manage_screen_keyboard() {
         default:
             break;
     }
-    free(url);
 }
 
 void file_manage_screen_render() {
@@ -294,6 +355,14 @@ void managed_files_screen_render() {
     }
 }
 
+void selection_confirm_screen_enter_func() {
+    // make sure string is not empty before going back
+    if(strcmp(current_name, "") != 0) {
+        keyboard_clear_enter_func();
+        current_interface = SELECTION_CONFIRM_SCREEN;
+    }
+}
+
 void selection_confirm_screen_keyboard() {
     FileList *node;
     char *full_path;
@@ -314,6 +383,7 @@ void selection_confirm_screen_keyboard() {
             current_interface = MAIN_SCREEN;
             break;
         case 'y':
+            keyboard_setup(current_name, &selection_confirm_screen_enter_func);
             current_interface = SELECTION_RENAME_SCREEN;
             break;
         default:
@@ -341,7 +411,7 @@ void selection_screen_keyboard_held() {
 void selection_rename_screen_keyboard() {
     switch(event.key.keysym.sym) {
         case 'b':
-            current_interface = SELECTION_CONFIRM_SCREEN;
+            selection_confirm_screen_enter_func();
             break;
         default:
             break;
@@ -353,7 +423,7 @@ void selection_rename_screen_render() {
     render_text("Rename file");
     text_pos.y = TEXT_HEIGHT * 4;
     render_text("Done - Press B");
-    show_keyboard(current_name, 0, TEXT_HEIGHT * 2);
+    show_keyboard(0, TEXT_HEIGHT * 2);
 }
 
 void selection_screen_keyboard() {
@@ -427,6 +497,79 @@ void selection_screen_render() {
             j++;
         }
     }
+}
+
+void invalid_creds_screen_keyboard() {
+    switch(event.key.keysym.sym) {
+        case 'b':
+            current_interface = FILE_MANAGE_SCREEN;
+        default:
+            break;
+    }
+}
+
+void invalid_creds_screen_render() {
+    text_pos.y = 0;
+    render_text("Invalid Credentials");
+    text_pos.y = TEXT_HEIGHT * 2;
+    render_text("Back - Press B");
+}
+
+void github_creds_screen_keyboard() {
+    switch(event.key.keysym.sym) {
+        case 'b':
+            if(local_creds_status == -1) {
+                username[0] = '\0';
+                password[0] = '\0';
+            }
+            current_interface = MAIN_SCREEN;
+        default:
+            break;
+    }
+}
+
+void github_creds_screen_render() {
+    text_pos.y = 0;
+    render_text("Github Login");
+    text_pos.y = TEXT_HEIGHT * 2;
+    render_text("Username");
+    if(github_input_location != TEXT_HEIGHT * 3) {
+        text_pos.y = TEXT_HEIGHT * 3;
+        render_text(username);
+    }
+    text_pos.y = TEXT_HEIGHT * 5;
+    render_text("Password");
+    text_pos.y = TEXT_HEIGHT * 8;
+    render_text("Cancel - Press B");
+    show_keyboard(0, github_input_location);
+}
+
+void github_reset_creds_screen_keyboard() {
+    switch(event.key.keysym.sym) {
+        case 'a':
+            free(username);
+            username = NULL;
+            free(password);
+            password = NULL;
+            delete_local_creds();
+            local_creds_status = -1;
+            github_setup_screen();
+            current_interface = GITHUB_CREDS_SCREEN;
+            break;
+        case 'b':
+            current_interface = MAIN_SCREEN;
+        default:
+            break;
+    }
+}
+
+void github_reset_creds_screen_render() {
+    text_pos.y = 0;
+    render_text("Reset Github Credentials?");
+    text_pos.y = TEXT_HEIGHT * 2;
+    render_text("Yes - Press A");
+    text_pos.y = TEXT_HEIGHT * 3;
+    render_text("No - Press B");
 }
 
 void interface_init() {
@@ -526,6 +669,15 @@ void main_interface() {
                     case FILE_MANAGE_SCREEN:
                         file_manage_screen_keyboard();
                         break;
+                    case GITHUB_CREDS_SCREEN:
+                        github_creds_screen_keyboard();
+                        break;
+                    case GITHUB_RESET_CREDS_SCREEN:
+                        github_reset_creds_screen_keyboard();
+                        break;
+                    case INVALID_CREDS_SCREEN:
+                        invalid_creds_screen_keyboard();
+                        break;
                 }
             } else if(event.type == SDL_MOUSEBUTTONDOWN) {
                 mouse_pressed = 1;
@@ -557,6 +709,15 @@ void main_interface() {
                 break;
             case FILE_MANAGE_SCREEN:
                 file_manage_screen_render();
+                break;
+            case GITHUB_CREDS_SCREEN:
+                github_creds_screen_render();
+                break;
+            case GITHUB_RESET_CREDS_SCREEN:
+                github_reset_creds_screen_render();
+                break;
+            case INVALID_CREDS_SCREEN:
+                invalid_creds_screen_render();
                 break;
         }
 

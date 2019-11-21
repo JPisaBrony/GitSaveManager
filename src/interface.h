@@ -12,6 +12,9 @@
 #define SELECTION_CONFIRM_SCREEN 3
 #define SELECTION_RENAME_SCREEN 4
 #define FILE_MANAGE_SCREEN 5
+#define GITHUB_CREDS_SCREEN 6
+#define GITHUB_RESET_CREDS_SCREEN 7
+#define INVALID_CREDS_SCREEN 8
 
 void interface_init();
 void main_interface();

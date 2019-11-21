@@ -203,7 +203,24 @@ void free_filelist() {
     }
 }
 
-void get_local_creds() {
+void write_local_creds() {
+    FILE *file = NULL;
+    file = fopen(CREDENTIALS_FILE, "w");
+
+    if(file == NULL) {
+        printf("failed to write to %s\n", CREDENTIALS_FILE);
+        return;
+    }
+
+    fputs(username, file);
+    fputs("\n", file);
+    fputs(password, file);
+
+    fclose(file);
+    local_creds_status = 0;
+}
+
+int get_local_creds() {
     int i = 0;
     FILE *file = NULL;
     char *line = malloc(MAX_LINE_LENGTH);
@@ -214,7 +231,7 @@ void get_local_creds() {
     if(file == NULL) {
         free(line);
         printf("failed to open file %s\n", CREDENTIALS_FILE);
-        return;
+        return -1;
     }
 
     while(fgets(line, MAX_LINE_LENGTH, file)) {
@@ -232,6 +249,11 @@ void get_local_creds() {
 
     fclose(file);
     free(line);
+    return 0;
+}
+
+void delete_local_creds() {
+    remove(CREDENTIALS_FILE);
 }
 
 FileList* get_filelist() {
@@ -259,5 +281,5 @@ void file_cleanup() {
 }
 
 void file_init() {
-    get_local_creds();
+    local_creds_status = get_local_creds();
 }

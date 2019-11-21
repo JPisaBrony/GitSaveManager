@@ -1,5 +1,13 @@
 #include "global.h"
 
+int check_username_and_password() {
+    if(username == NULL || username[0] == '\0')
+        return -1;
+    if(password == NULL || password[0] == '\0')
+        return -1;
+    return 0;
+}
+
 static size_t CurlReturnCallback(void *data, size_t size, size_t nmemb, void *curl_ret) {
     size_t realsize = size * nmemb;
     CurlReturn *ret = (CurlReturn *) curl_ret;
@@ -20,14 +28,17 @@ static size_t CurlReturnCallback(void *data, size_t size, size_t nmemb, void *cu
     return 0;
 }
 
-void createGist(char* path, char* filename) {
+int createGist(char* path, char* filename) {
+    if(check_username_and_password() == -1)
+        return -1;
+
     CurlReturn curl_ret;
     curl_ret.data = malloc(1);
     curl_ret.size = 0;
 
     char* buffer = open_file_and_get_hex_string(path);
     if(buffer == NULL)
-        return;
+        return -1;
 
     // construct json object for PATCH request
     json_object *json = json_object_new_object();
@@ -65,9 +76,13 @@ void createGist(char* path, char* filename) {
     free(json);
     free(buffer);
     free(curl_ret.data);
+    return 0;
 }
 
-void getAndSaveGist(char* filename, char* url) {
+int getAndSaveGist(char* filename, char* url) {
+    if(check_username_and_password() == -1)
+        return -1;
+
     CurlReturn curl_ret;
     curl_ret.data = malloc(1);
     curl_ret.size = 0;
@@ -113,6 +128,7 @@ void getAndSaveGist(char* filename, char* url) {
     }
 
     free(curl_ret.data);
+    return 0;
 }
 
 char* getUrlFromGistByFilename(char *filename) {
@@ -138,25 +154,28 @@ char* getUrlFromGistByFilename(char *filename) {
 
         json_object *json_obj = json_tokener_parse(curl_ret.data);
 
-        int i;
-        json_object *json_iter;
-        size_t json_obj_len = json_object_array_length(json_obj);
-
-        for(i = 0; i < json_obj_len; i++) {
-            json_iter = json_object_array_get_idx(json_obj, i);
-            json_iter = json_object_object_get(json_iter, "files");
-            lh_table *files_table = json_object_get_object(json_iter);
-            const char *filename_json = files_table->head->k;
-            if(strcmp(filename, filename_json) == 0) {
+        if(json_object_is_type(json_obj, json_type_array)) {
+            int i;
+            json_object *json_iter;
+            size_t json_obj_len = json_object_array_length(json_obj);
+            for(i = 0; i < json_obj_len; i++) {
                 json_iter = json_object_array_get_idx(json_obj, i);
-                json_iter = json_object_object_get(json_iter, "url");
-                free(curl_ret.data);
-                curl_easy_cleanup(curl);
-                return (char *) json_object_get_string(json_iter);
+                json_iter = json_object_object_get(json_iter, "files");
+                lh_table *files_table = json_object_get_object(json_iter);
+                const char *filename_json = files_table->head->k;
+                if(strcmp(filename, filename_json) == 0) {
+                    json_iter = json_object_array_get_idx(json_obj, i);
+                    json_iter = json_object_object_get(json_iter, "url");
+                    free(curl_ret.data);
+                    curl_easy_cleanup(curl);
+                    return (char *) json_object_get_string(json_iter);
+                }
             }
+            free(json_iter);
+        } else {
+            return "e";
         }
 
-        free(json_iter);
         curl_easy_cleanup(curl);
     }
 
@@ -164,14 +183,17 @@ char* getUrlFromGistByFilename(char *filename) {
     return NULL;
 }
 
-void updateGist(char* filename, char* path, char* url) {
+int updateGist(char* filename, char* path, char* url) {
+    if(check_username_and_password() == -1)
+        return -1;
+
     CurlReturn curl_ret;
     curl_ret.data = malloc(1);
     curl_ret.size = 0;
 
     char* buffer = open_file_and_get_hex_string(path);
     if(buffer == NULL)
-        return;
+        return -1;
 
     // construct json object for PATCH request
     json_object *json = json_object_new_object();
@@ -210,6 +232,7 @@ void updateGist(char* filename, char* path, char* url) {
     free(json);
     free(buffer);
     free(curl_ret.data);
+    return 0;
 }
 
 void curl_cleanup() {

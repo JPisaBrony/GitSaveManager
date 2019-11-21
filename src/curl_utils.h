@@ -8,10 +8,10 @@ typedef struct {
     size_t size;
 } CurlReturn;
 
-void createGist(char* path, char* filename);
-void getAndSaveGist(char* filename, char* url);
+int createGist(char* path, char* filename);
+int getAndSaveGist(char* filename, char* url);
 char* getUrlFromGistByFilename(char *filename);
-void updateGist(char* filename, char* path, char* url);
+int updateGist(char* filename, char* path, char* url);
 void curl_cleanup();
 void curl_init();
 

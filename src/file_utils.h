@@ -13,6 +13,8 @@ typedef struct FileList {
 
 void file_init();
 void file_cleanup();
+void write_local_creds();
+void delete_local_creds();
 FileList* get_filelist();
 int get_filelist_size();
 FileList* create_filelist_node(char* path, char* name);

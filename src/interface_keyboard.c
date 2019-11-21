@@ -7,6 +7,7 @@ Uint32 text_color_bg = 0;
 Uint32 text_color_bg_pressed = 0;
 int key_state = KEYS_LOWER;
 int shift_pressed = 0;
+void (*enter_func)() = NULL;
 
 char *input;
 char **keys;
@@ -99,6 +100,8 @@ void special_key_button(char *msg, int action) {
                     input[len - 1] = '\0';
                     break;
                 case SPECIAL_KEY_ACTION_ENTER:
+                    if(enter_func != NULL)
+                        enter_func();
                     break;
                 case SPECIAL_KEY_ACTION_CAPS:
                     if(key_state != KEYS_EXTRA) {
@@ -171,9 +174,18 @@ void keyboard_init() {
     mouse_just_pressed = 0;
 }
 
-void show_keyboard(char* input_ptr, int input_x, int input_y) {
+void keyboard_setup(char* input_ptr, void (*enter_func_ptr)()) {
     // set input to use the passed in input string
     input = input_ptr;
+    // set enter_func to the function passed in
+    enter_func = enter_func_ptr;
+}
+
+void keyboard_clear_enter_func() {
+    enter_func = NULL;
+}
+
+void show_keyboard(int input_x, int input_y) {
     // print input at specified location
     rect.x = input_x;
     rect.y = input_y;

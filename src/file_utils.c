@@ -44,7 +44,7 @@ int check_if_file_exists_in_dir(char *dir, char *file) {
         exit_msg("scandir failed");
 
     while(i--) {
-        if(strcmp(files[i]->d_name, CREDENTIALS_FILE) == 0) {
+        if(strcmp(files[i]->d_name, file) == 0) {
             creds_file_exists = 1;
             break;
         }

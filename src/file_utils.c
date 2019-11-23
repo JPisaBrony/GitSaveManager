@@ -35,6 +35,26 @@ void binary_to_hex(char *doubleSizedCharBuffer, int binarySize) {
     }
 }
 
+int check_if_file_exists_in_dir(char *dir, char *file) {
+    int creds_file_exists = 0;
+    struct dirent **files = NULL;
+    int i = scandir(dir, &files, NULL, alphasort);
+
+    if(i < 0)
+        exit_msg("scandir failed");
+
+    while(i--) {
+        if(strcmp(files[i]->d_name, CREDENTIALS_FILE) == 0) {
+            creds_file_exists = 1;
+            break;
+        }
+    }
+
+    free(files);
+
+    return creds_file_exists;
+}
+
 char* open_file_and_get_hex_string(char* filename) {
     int i, c;
     FILE *file = NULL;
@@ -75,42 +95,47 @@ FileList* create_filelist_node(char* path, char* name) {
 }
 
 FileList* get_filelist_from_save_file() {
-    FILE *file = NULL;
-    char *line = malloc(MAX_LINE_LENGTH);
-    char* name;
-    char* path;
-    filelist_size = 0;
+    int save_file_exists = check_if_file_exists_in_dir(".", SAVEFILES);
 
-    file = fopen(SAVEFILES, "r");
+    if(save_file_exists == 1) {
+        FILE *file = NULL;
+        file = fopen(SAVEFILES, "r");
 
-    if(file == NULL)
-        return NULL;
+        if(file == NULL)
+            return NULL;
 
-    FileList *list = malloc(sizeof(FileList));
-    FileList *iter = list;
+        char* name;
+        char* path;
+        FileList *list = malloc(sizeof(FileList));
+        FileList *iter = list;
+        char *line = malloc(MAX_LINE_LENGTH);
+        filelist_size = 0;
 
-    while(fgets(line, MAX_LINE_LENGTH, file)) {
-        name = strtok(line, " ");
-        path = strtok(NULL, " ");
-        path = strtok(path, "\n");
-        FileList *new_node = create_filelist_node(path, name);
-        iter->next = new_node;
-        iter = new_node;
-        filelist_size++;
+        while(fgets(line, MAX_LINE_LENGTH, file)) {
+            name = strtok(line, " ");
+            path = strtok(NULL, " ");
+            path = strtok(path, "\n");
+            FileList *new_node = create_filelist_node(path, name);
+            iter->next = new_node;
+            iter = new_node;
+            filelist_size++;
+        }
+
+        // save first node
+        iter = list;
+        // fix first node to point to correct one
+        list = list->next;
+        // free unlinked node
+        free(iter);
+
+        // cleanup
+        fclose(file);
+        free(line);
+
+        return list;
     }
 
-    // save first node
-    iter = list;
-    // fix first node to point to correct one
-    list = list->next;
-    // free unlinked node
-    free(iter);
-
-    // cleanup
-    fclose(file);
-    free(line);
-
-    return list;
+    return NULL;
 }
 
 void write_save_file_from_filelist(FileList *list) {
@@ -143,7 +168,6 @@ void append_node_to_save_file(FileList *node) {
         return;
 
     FILE *file = NULL;
-
     file = fopen(SAVEFILES, "a");
 
     if(file == NULL)
@@ -217,39 +241,45 @@ void write_local_creds() {
     fputs(password, file);
 
     fclose(file);
-    local_creds_status = 0;
+    local_creds_status = LOCAL_CREDS_STATUS_OK;
 }
 
 int get_local_creds() {
-    int i = 0;
-    FILE *file = NULL;
-    char *line = malloc(MAX_LINE_LENGTH);
-    size_t len = 0;
+    int creds_file_exists = check_if_file_exists_in_dir(".", CREDENTIALS_FILE);
 
-    file = fopen(CREDENTIALS_FILE, "r");
+    if(creds_file_exists == 1) {
+        FILE *file = NULL;
+        file = fopen(CREDENTIALS_FILE, "r");
 
-    if(file == NULL) {
-        free(line);
-        printf("failed to open file %s\n", CREDENTIALS_FILE);
-        return -1;
-    }
-
-    while(fgets(line, MAX_LINE_LENGTH, file)) {
-        len = strlen(line);
-        if(i == 0) {
-            username = malloc(len - 1);
-            strcpy(username, strtok(line, "\r\n"));
-            i++;
-        } else if(i == 1) {
-            password = malloc(len - 1);
-            strcpy(password, strtok(line, "\r\n"));
-            i++;
+        if(file == NULL) {
+            printf("failed to open file %s\n", CREDENTIALS_FILE);
+            return LOCAL_CREDS_STATUS_FAILURE;
         }
+
+        int i = 0;
+        char *line = malloc(MAX_LINE_LENGTH);
+        size_t len = 0;
+
+        while(fgets(line, MAX_LINE_LENGTH, file)) {
+            len = strlen(line);
+            if(i == 0) {
+                username = malloc(len - 1);
+                strcpy(username, strtok(line, "\r\n"));
+                i++;
+            } else if(i == 1) {
+                password = malloc(len - 1);
+                strcpy(password, strtok(line, "\r\n"));
+                i++;
+            }
+        }
+
+        fclose(file);
+        free(line);
+    } else {
+        return LOCAL_CREDS_STATUS_FAILURE;
     }
 
-    fclose(file);
-    free(line);
-    return 0;
+    return LOCAL_CREDS_STATUS_OK;
 }
 
 void delete_local_creds() {

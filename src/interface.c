@@ -184,13 +184,13 @@ void main_screen_keyboard() {
             current_interface = MANAGED_FILE_SCREEN;
             break;
         case 'y':
-            current_interface = SELECTION_SCREEN;
             reset_selected_path();
             scan_directory();
             reset_scroll_vars();
+            current_interface = SELECTION_SCREEN;
             break;
         case SDLK_RETURN:
-            if(local_creds_status == 0) {
+            if(local_creds_status == LOCAL_CREDS_STATUS_OK) {
                 current_interface = GITHUB_RESET_CREDS_SCREEN;
             } else {
                 github_setup_screen();
@@ -518,7 +518,7 @@ void invalid_creds_screen_render() {
 void github_creds_screen_keyboard() {
     switch(event.key.keysym.sym) {
         case 'b':
-            if(local_creds_status == -1) {
+            if(local_creds_status == LOCAL_CREDS_STATUS_FAILURE) {
                 username[0] = '\0';
                 password[0] = '\0';
             }
@@ -552,7 +552,7 @@ void github_reset_creds_screen_keyboard() {
             free(password);
             password = NULL;
             delete_local_creds();
-            local_creds_status = -1;
+            local_creds_status = LOCAL_CREDS_STATUS_FAILURE;
             github_setup_screen();
             current_interface = GITHUB_CREDS_SCREEN;
             break;
@@ -587,7 +587,7 @@ void interface_init() {
     #ifdef _3DS
     SDL_ShowCursor(SDL_DISABLE);
     romfsInit();
-    font = TTF_OpenFont("romfs:/FreeMonoBold.ttf", FONT_SIZE);
+    font = TTF_OpenFont("romfs:FreeMonoBold.ttf", FONT_SIZE);
     #else
     font = TTF_OpenFont("FreeMonoBold.ttf", FONT_SIZE);
     #endif

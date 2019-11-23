@@ -4,6 +4,8 @@
 #define MAX_LINE_LENGTH 8192
 #define CREDENTIALS_FILE "credentials.txt"
 #define SAVEFILES "savefiles.txt"
+#define LOCAL_CREDS_STATUS_OK 0
+#define LOCAL_CREDS_STATUS_FAILURE -1
 
 typedef struct FileList {
     char *path;

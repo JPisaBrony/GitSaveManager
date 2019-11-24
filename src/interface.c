@@ -14,9 +14,7 @@ int original_dir_amount = 0;
 struct stat stat_check;
 char *stat_path = NULL;
 int current_interface = 0;
-FileList *files = NULL;
 FileList *cur_file = NULL;
-int files_size = 0;
 SDL_Event event;
 SDL_Surface *text = NULL;
 SDL_Color text_color;
@@ -118,8 +116,7 @@ void reset_scroll_vars() {
 }
 
 void reset_managed_screen_scroll_vars() {
-    files = get_filelist();
-    files_size = get_filelist_size() - 1;
+    get_filelist();
     cur_sel = 0;
     screen_scroll_lower = 0;
     screen_scroll_upper = SCREEN_SCROLL_SIZE - 2;
@@ -216,7 +213,7 @@ void main_screen_render() {
 
 void find_current_file_node() {
     i = 0;
-    FileList *cur = files;
+    FileList *cur = filelist;
 
     while(cur != NULL) {
         if(i == cur_sel) {
@@ -268,8 +265,8 @@ void file_manage_screen_keyboard() {
             }
             break;
         case 'x':
-            delete_node_from_filelist(&files, cur_sel);
-            write_save_file_from_filelist(files);
+            delete_node_from_filelist(&filelist, cur_sel);
+            write_save_file_from_filelist(filelist);
             reset_managed_screen_scroll_vars();
             current_interface = MANAGED_FILE_SCREEN;
             break;
@@ -299,7 +296,7 @@ void file_manage_screen_render() {
 }
 
 void managed_files_screen_keyboard_held() {
-    screen_keyboard_held_up_or_down(files_size);
+    screen_keyboard_held_up_or_down(filelist_size);
 }
 
 void managed_files_screen_keyboard() {
@@ -324,7 +321,7 @@ void managed_files_screen_render() {
     i = TEXT_HEIGHT * 2;
     text_pos.y = TEXT_HEIGHT * 2;
 
-    if(cur_sel >= screen_scroll_upper && cur_sel < files_size) {
+    if(cur_sel >= screen_scroll_upper && cur_sel < filelist_size) {
         screen_scroll_lower++;
         screen_scroll_upper++;
     } else if(cur_sel < screen_scroll_lower && cur_sel > -1) {
@@ -332,11 +329,11 @@ void managed_files_screen_render() {
         screen_scroll_upper--;
     }
 
-    if(files == NULL) {
+    if(filelist == NULL) {
         render_text("No currently managed files");
     } else {
         char* full_text = malloc(MAX_LINE_LENGTH);
-        FileList *cur = files;
+        FileList *cur = filelist;
         j = 0;
         while(cur != NULL) {
             if(j >= screen_scroll_lower && j <= screen_scroll_upper) {

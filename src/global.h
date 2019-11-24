@@ -46,4 +46,7 @@ void exit_msg(char* msg);
 #include "curl_utils.h"
 #include "interface_keyboard.h"
 
+FileList *filelist;
+int filelist_size;
+
 #endif

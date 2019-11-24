@@ -1,8 +1,5 @@
 #include "global.h"
 
-FileList *filelist = NULL;
-int filelist_size = 0;
-
 void hex_to_binary(char *buffer, int binarySize) {
     int i;
     char raw;
@@ -127,6 +124,8 @@ FileList* get_filelist_from_save_file() {
         list = list->next;
         // free unlinked node
         free(iter);
+        // remove one from filelist_size since we removed the first node
+        filelist_size--;
 
         // cleanup
         fclose(file);
@@ -139,6 +138,9 @@ FileList* get_filelist_from_save_file() {
 }
 
 void write_save_file_from_filelist(FileList *list) {
+    if(list == NULL)
+        return;
+
     FILE *file = NULL;
     char *line;
     FileList *cur = list;
@@ -194,8 +196,9 @@ void delete_node_from_filelist(FileList **list, int node_number) {
 
     if(node_number == 0) {
         temp = (*list)->next;
-        free(*list);
+        free_filelist_node(*list);
         *list = temp;
+        delete_local_save_file();
         return;
     }
 
@@ -212,13 +215,16 @@ void delete_node_from_filelist(FileList **list, int node_number) {
 }
 
 void free_filelist_node(FileList *node) {
+    if(node == NULL)
+        return;
+
     free(node->path);
     free(node->name);
     free(node);
 }
 
-void free_filelist() {
-    FileList *cur = filelist;
+void free_filelist(FileList *list) {
+    FileList *cur = list;
     FileList *temp;
     while(cur != NULL) {
         temp = cur;
@@ -286,18 +292,15 @@ void delete_local_creds() {
     remove(CREDENTIALS_FILE);
 }
 
-FileList* get_filelist() {
-    // reset the filelist incase it changed
-    free_filelist();
-    // get the filelist
-    filelist = get_filelist_from_save_file();
-    // return the filelist if it exists
-    // otherwise the filelist will be NULL
-    return filelist;
+void delete_local_save_file() {
+    remove(SAVEFILES);
 }
 
-int get_filelist_size() {
-    return filelist_size;
+void get_filelist() {
+    // reset the filelist incase it changed
+    free_filelist(filelist);
+    // get the filelist
+    filelist = get_filelist_from_save_file();
 }
 
 void free_creds() {
@@ -306,10 +309,12 @@ void free_creds() {
 }
 
 void file_cleanup() {
-    free_filelist();
+    free_filelist(filelist);
     free_creds();
 }
 
 void file_init() {
     local_creds_status = get_local_creds();
+    filelist = NULL;
+    filelist_size = 0;
 }

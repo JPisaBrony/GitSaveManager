@@ -33,7 +33,7 @@ void free_namelist() {
 }
 
 void cleanup() {
-    #ifdef _3DS
+    #ifdef __3DS__
     romfsExit();
     socExit();
     #endif
@@ -581,7 +581,7 @@ void interface_init() {
     if(TTF_Init() == -1)
         exit_msg("Couldn't init SDL TTF");
 
-    #ifdef _3DS
+    #ifdef __3DS__
     SDL_ShowCursor(SDL_DISABLE);
     romfsInit();
     font = TTF_OpenFont("romfs:FreeMonoBold.ttf", FONT_SIZE);
@@ -613,7 +613,7 @@ void interface_init() {
     selected_path = malloc(1024);
     reset_selected_path();
 
-    #ifdef _3DS
+    #ifdef __3DS__
     // allocate buffer for SOC service
     u32 *SOC_buffer = (u32*) memalign(SOC_ALIGN, SOC_BUFFERSIZE);
     if(SOC_buffer == NULL)

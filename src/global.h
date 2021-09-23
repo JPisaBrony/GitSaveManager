@@ -11,8 +11,9 @@
 #include <curl/curl.h>
 #include <json-c/json.h>
 
-#ifdef _3DS
+#ifdef __3DS__
 #include <3ds.h>
+#include <malloc.h>
 
 #define SOC_ALIGN       0x1000
 #define SOC_BUFFERSIZE  0x100000
@@ -27,15 +28,15 @@
 #define BPP 8
 
 // global variables
-SDL_Surface *screen;
-TTF_Font *font;
-char* username;
-char* password;
-int mouse_x;
-int mouse_y;
-int mouse_pressed;
-int mouse_just_pressed;
-int local_creds_status;
+extern SDL_Surface *screen;
+extern TTF_Font *font;
+extern char* username;
+extern char* password;
+extern int mouse_x;
+extern int mouse_y;
+extern int mouse_pressed;
+extern int mouse_just_pressed;
+extern int local_creds_status;
 
 // global functions
 void exit_msg(char* msg);
@@ -46,7 +47,7 @@ void exit_msg(char* msg);
 #include "curl_utils.h"
 #include "interface_keyboard.h"
 
-FileList *filelist;
-int filelist_size;
+extern FileList *filelist;
+extern int filelist_size;
 
 #endif

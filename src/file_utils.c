@@ -5,14 +5,13 @@ void hex_to_binary(char *buffer, int binarySize) {
     char raw;
     char vals[256];
 
-    for(i = 0; i < 10; i++){
+    for(i = 0; i < 10; i++) {
         vals['0'+i] = i;
     }
-    for(i = 0; i < 6; i++){
+    for(i = 0; i < 6; i++) {
         vals['A'+i] = 10+i;
         vals['a'+i] = 10+i;
     }
-
     for(i = 0; i < binarySize - 1; i++) {
         raw = vals[buffer[i<<1]]<<4;
         raw |= vals[buffer[(i<<1)+1]];
@@ -48,7 +47,6 @@ int check_if_file_exists_in_dir(char *dir, char *file) {
     }
 
     free(files);
-
     return creds_file_exists;
 }
 
@@ -77,7 +75,6 @@ char* open_file_and_get_hex_string(char* filename) {
     fclose(file);
 
     binary_to_hex(buffer, binarySize);
-
     return buffer;
 }
 
@@ -133,7 +130,6 @@ FileList* get_filelist_from_save_file() {
 
         return list;
     }
-
     return NULL;
 }
 
@@ -160,7 +156,6 @@ void write_save_file_from_filelist(FileList *list) {
         free(line);
         cur = cur->next;
     }
-
     // cleanup
     fclose(file);
 }
@@ -182,7 +177,6 @@ void append_node_to_save_file(FileList *node) {
     strcat(line, "\n");
     fputs(line, file);
     free(line);
-
     fclose(file);
 }
 
@@ -284,7 +278,6 @@ int get_local_creds() {
     } else {
         return LOCAL_CREDS_STATUS_FAILURE;
     }
-
     return LOCAL_CREDS_STATUS_OK;
 }
 

@@ -17,6 +17,7 @@ void file_init();
 void file_cleanup();
 void write_local_creds();
 void delete_local_creds();
+void delete_local_save_file();
 void get_filelist();
 FileList* create_filelist_node(char* path, char* name);
 void free_filelist_node(FileList *node);

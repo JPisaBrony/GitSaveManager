@@ -1,6 +1,5 @@
 #include "global.h"
 
-int i, j;
 SDL_Rect rect;
 SDL_Color text_color_fg;
 Uint32 text_color_bg = 0;
@@ -197,6 +196,7 @@ void show_keyboard(int input_x, int input_y) {
     SDL_FreeSurface(text);
 
     // print each key
+    int i, j;
     for(i = 0; i < KEYS_ROWS; i++) {
         rect.y = KEYBOARD_START_Y + (i * KEYBOARD_Y_INCREMENT) + KEYBOARD_KEY_SPACING;
         int len = strlen(keys[i]);

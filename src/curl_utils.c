@@ -156,7 +156,7 @@ char* getUrlFromGistByFilename(char *filename) {
 
         if(json_object_is_type(json_obj, json_type_array)) {
             int i;
-            json_object *json_iter;
+            json_object *json_iter = NULL;
             size_t json_obj_len = json_object_array_length(json_obj);
             for(i = 0; i < json_obj_len; i++) {
                 json_iter = json_object_array_get_idx(json_obj, i);
